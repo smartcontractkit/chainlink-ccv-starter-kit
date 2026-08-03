@@ -1,0 +1,12 @@
+apiVersion: v2
+name: ccv-cell
+description: Chainlink CCIP 2.0 CCV Cell deployment, including aggregator and verifier
+type: application
+version: 0.1.0
+kubeVersion: ">= 1.19"
+keywords:
+  - chainlink
+  - ccip
+  - ccv
+  - cross-chain-verifier
+home: https://github.com/smartcontractkit/chainlink-ccv

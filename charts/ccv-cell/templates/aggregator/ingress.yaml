@@ -1,0 +1,42 @@
+{{- if and .Values.aggregator.enabled .Values.aggregator.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "ccv-cell.aggregator.fullname" . }}
+  labels:
+    {{- include "ccv-cell.aggregator.labels" . | nindent 4 }}
+    {{- with .Values.aggregator.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    # gRPC/HTTP2 end to end is a hard requirement (see Network exposure and
+    # Hostname/TLS constraints). The exact annotations are controller- and
+    # cloud-specific (GKE Ingress backend-config protocol: HTTP2; ALB gRPC
+    # target-type/protocol-version; Azure AGIC or a mesh's Gateway) and are
+    # the per-cloud design proposal's decision — set them here per that
+    # proposal, not left as chart defaults.
+    {{- with .Values.aggregator.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.aggregator.ingress.className }}
+  ingressClassName: {{ .Values.aggregator.ingress.className }}
+  {{- end }}
+  {{- if .Values.aggregator.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.aggregator.ingress.host | quote }}
+      secretName: {{ .Values.aggregator.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.aggregator.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "ccv-cell.aggregator.fullname" . }}
+                port:
+                  name: grpc
+{{- end }}

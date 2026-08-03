@@ -1,0 +1,27 @@
+{{- if .Values.verifier.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ccv-cell.verifier.fullname" . }}
+  labels:
+    {{- include "ccv-cell.verifier.labels" . | nindent 4 }}
+    {{- with .Values.verifier.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.verifier.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  # ClusterIP only, on purpose: the verifier never receives inbound traffic
+  # from outside the cluster (see Network exposure constraints). This
+  # Service exists only so its health/readiness endpoints are reachable for
+  # in-cluster monitoring.
+  type: {{ .Values.verifier.service.type }}
+  selector:
+    {{- include "ccv-cell.verifier.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.verifier.service.ports.http }}
+      targetPort: http
+{{- end }}

@@ -1,0 +1,71 @@
+{{- if .Values.verifier.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ccv-cell.verifier.fullname" . }}-config
+  labels:
+    {{- include "ccv-cell.verifier.labels" . | nindent 4 }}
+    {{- with .Values.verifier.configMap.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.verifier.configMap.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  # Renders verifier/committee/config.documented.toml (see upstream
+  # docs/config/README.md). Secrets referenced here (DB URL, aggregator HMAC
+  # keys) are NOT in this file — they reach the container via
+  # COMMITTEE_VERIFIER_SECRETS_PATH, sourced from the Secret this chart's
+  # ExternalSecret creates.
+  #
+  # bootstrap-config.toml is a SEPARATE file, read via BOOTSTRAPPER_CONFIG_PATH,
+  # matching the separate docs/config/bootstrap/config.documented.toml
+  # namespace upstream (its own config surface, distinct from the committee
+  # verifier's own config.toml below). app_config_mode = "local_app_config" is
+  # load-bearing: it switches the embedded bootstrap package from its default
+  # "JD" (Job Distributor) mode — there is no Job Distributor to connect to in
+  # a standalone brownfield deployment — to loading the committee verifier's
+  # own app config straight off disk, from the path named by
+  # local_app_config_path.
+  bootstrap-config.toml: |
+    app_config_mode = "local_app_config"
+    local_app_config_path = "/etc/committee-verifier/config.toml"
+  config.toml: |
+    verifier_id = {{ .Values.verifier.config.verifierId | quote }}
+
+    {{- range .Values.verifier.config.aggregators }}
+
+    [[aggregators]]
+    name = {{ .name | quote }}
+    secret_name = {{ .secretName | quote }}
+    address = {{ .address | quote }}
+    insecure_connection = {{ .insecureConnection | default false }}
+    {{- if .maxSendMsgSizeBytes }}
+    max_send_msg_size_bytes = {{ .maxSendMsgSizeBytes }}
+    {{- end }}
+    {{- if .maxRecvMsgSizeBytes }}
+    max_recv_msg_size_bytes = {{ .maxRecvMsgSizeBytes }}
+    {{- end }}
+    {{- end }}
+
+    [committee_verifier_addresses]
+    {{- range $chain, $addr := .Values.verifier.config.committeeVerifierAddresses }}
+    {{ $chain }} = {{ $addr | quote }}
+    {{- end }}
+
+    [default_executor_on_ramp_addresses]
+    {{- range $chain, $addr := .Values.verifier.config.defaultExecutorOnRampAddresses }}
+    {{ $chain }} = {{ $addr | quote }}
+    {{- end }}
+
+    [on_ramp_addresses]
+    {{- range $chain, $addr := .Values.verifier.config.onRampAddresses }}
+    {{ $chain }} = {{ $addr | quote }}
+    {{- end }}
+
+    [rmn_remote_addresses]
+    {{- range $chain, $addr := .Values.verifier.config.rmnRemoteAddresses }}
+    {{ $chain }} = {{ $addr | quote }}
+    {{- end }}
+{{- end }}

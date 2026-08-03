@@ -1,0 +1,35 @@
+{{- if and .Values.verifier.enabled .Values.verifier.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ccv-cell.verifier.fullname" . }}
+  labels:
+    {{- include "ccv-cell.verifier.labels" . | nindent 4 }}
+    {{- with .Values.verifier.networkPolicy.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.verifier.networkPolicy.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ccv-cell.verifier.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    {{- range .Values.verifier.networkPolicy.ingress }}
+    - {{- with .from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      ports:
+        {{- if .ports }}
+        {{- toYaml .ports | nindent 8 }}
+        {{- else }}
+        - port: {{ $.Values.verifier.ports.http }}
+        - port: {{ $.Values.verifier.ports.bootstrapInfo }}
+        {{- end }}
+    {{- end }}
+{{- end }}
