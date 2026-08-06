@@ -1,0 +1,42 @@
+{{/*
+  Gateway API alternative to ingress.yaml — same "Network exposure" note
+  applies (see aggregator.ingress in values.yaml): public, unauthenticated
+  read path by design, HTTP/2 end to end, stable hostname, TLS terminated on
+  the referenced Gateway (out of this chart's scope). Routes exclusively to
+  the grpc port; the health port is only reachable in-cluster.
+*/}}
+{{- if and .Values.aggregator.enabled .Values.aggregator.httpRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "ccv-cell.aggregator.fullname" . }}
+  labels:
+    {{- include "ccv-cell.aggregator.labels" . | nindent 4 }}
+    {{- with .Values.aggregator.httpRoute.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.aggregator.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- range .Values.aggregator.httpRoute.parentRefs }}
+    - group: {{ .group | default "gateway.networking.k8s.io" }}
+      kind: {{ .kind | default "Gateway" }}
+      name: {{ .name }}
+      {{- if .namespace }}
+      namespace: {{ .namespace }}
+      {{- end }}
+    {{- end }}
+  {{- with .Values.aggregator.httpRoute.hostnames }}
+  hostnames:
+    {{- range . }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - backendRefs:
+        - name: {{ include "ccv-cell.aggregator.fullname" . }}
+          port: {{ .Values.aggregator.ports.grpc }}
+{{- end }}

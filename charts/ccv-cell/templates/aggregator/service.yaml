@@ -1,0 +1,32 @@
+{{- if .Values.aggregator.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ccv-cell.aggregator.fullname" . }}
+  labels:
+    {{- include "ccv-cell.aggregator.labels" . | nindent 4 }}
+    {{- with .Values.aggregator.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.aggregator.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  # Usually ClusterIP behind ingress/httpRoute below (the cloud/operator load
+  # balancer is the real public entry point), but not restricted to it — set
+  # NodePort/LoadBalancer if this Service needs to be reachable without one.
+  type: {{ .Values.aggregator.service.type }}
+  {{- with .Values.aggregator.service.clusterIP }}
+  clusterIP: {{ . }}
+  {{- end }}
+  selector:
+    {{- include "ccv-cell.aggregator.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: grpc
+      port: {{ .Values.aggregator.ports.grpc }}
+      targetPort: grpc
+    - name: health
+      port: {{ .Values.aggregator.ports.health }}
+      targetPort: health
+{{- end }}

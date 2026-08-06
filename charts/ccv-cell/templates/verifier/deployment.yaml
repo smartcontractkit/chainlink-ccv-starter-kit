@@ -1,0 +1,136 @@
+{{- if .Values.verifier.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ccv-cell.verifier.fullname" . }}
+  labels:
+    {{- include "ccv-cell.verifier.labels" . | nindent 4 }}
+    {{- with .Values.verifier.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.verifier.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "ccv-cell.verifier.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ccv-cell.verifier.labels" . | nindent 8 }}
+        {{- with .Values.verifier.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.verifier.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "ccv-cell.verifier.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.verifier.podSecurityContext | nindent 8 }}
+      shareProcessNamespace: {{ .Values.verifier.shareProcessNamespace }}
+      {{- with .Values.verifier.podResources }}
+      resources:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.verifier.extraInitContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: verifier
+          image: {{ include "ccv-cell.image" (dict "root" . "component" "verifier") | quote }}
+          imagePullPolicy: {{ .Values.verifier.image.pullPolicy }}
+          env:
+            - name: BOOTSTRAPPER_CONFIG_PATH
+              value: /etc/config.toml
+            - name: BOOTSTRAPPER_SECRETS_PATH
+              value: /etc/bootstrap/secrets.toml
+            - name: COMMITTEE_VERIFIER_SECRETS_PATH
+              value: /etc/committee-verifier/secrets.toml
+            {{- with .Values.verifier.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- toYaml .Values.verifier.envFrom | nindent 12 }}
+          ports:
+            - name: http
+              protocol: TCP
+              containerPort: 8100
+            - name: bootstrap-info
+              containerPort: {{ .Values.verifier.ports.bootstrapInfo }}
+          livenessProbe:
+            {{- toYaml .Values.verifier.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.verifier.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.verifier.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.verifier.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config.toml
+              subPath: bootstrap-config.toml
+              readOnly: true
+            - name: config
+              mountPath: /etc/committee-verifier/config.toml
+              subPath: config.toml
+              readOnly: true
+            - name: secrets-bootstrap
+              mountPath: /etc/bootstrap/secrets.toml
+              {{- if eq .Values.verifier.secrets.bootstrap.type "externalSecret" }}
+              subPath: secrets.toml
+              {{- else }}
+              subPath: {{ .Values.verifier.secrets.bootstrap.existingSecret.key }}
+              {{- end }}
+              readOnly: true
+            - name: secrets-app
+              mountPath: /etc/committee-verifier/secrets.toml
+              {{- if eq .Values.verifier.secrets.app.type "externalSecret" }}
+              subPath: secrets.toml
+              {{- else }}
+              subPath: {{ .Values.verifier.secrets.app.existingSecret.key }}
+              {{- end }}
+              readOnly: true
+            {{- with .Values.verifier.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- with .Values.verifier.extraContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "ccv-cell.verifier.fullname" . }}-config
+        - name: secrets-app
+          secret:
+            secretName: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "app") }}
+        - name: secrets-bootstrap
+          secret:
+            secretName: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "bootstrap") }}
+        {{- with .Values.verifier.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.verifier.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.verifier.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.verifier.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

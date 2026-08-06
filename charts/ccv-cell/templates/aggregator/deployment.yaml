@@ -1,0 +1,118 @@
+{{- if .Values.aggregator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ccv-cell.aggregator.fullname" . }}
+  labels:
+    {{- include "ccv-cell.aggregator.labels" . | nindent 4 }}
+    {{- with .Values.aggregator.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.aggregator.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "ccv-cell.aggregator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ccv-cell.aggregator.labels" . | nindent 8 }}
+        {{- with .Values.aggregator.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.aggregator.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "ccv-cell.aggregator.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.aggregator.podSecurityContext | nindent 8 }}
+      shareProcessNamespace: {{ .Values.aggregator.shareProcessNamespace }}
+      {{- with .Values.aggregator.podResources }}
+      resources:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aggregator.extraInitContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: aggregator
+          image: {{ include "ccv-cell.image" (dict "root" . "component" "aggregator") | quote }}
+          imagePullPolicy: {{ .Values.aggregator.image.pullPolicy }}
+          env:
+            - name: AGGREGATOR_CONFIG_PATH
+              value: /etc/config.toml
+            - name: AGGREGATOR_SECRETS_PATH
+              value: /etc/aggregator/secrets.toml
+            {{- with .Values.aggregator.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- toYaml .Values.aggregator.envFrom | nindent 12 }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.aggregator.ports.grpc }}
+            - name: health
+              containerPort: {{ .Values.aggregator.ports.health }}
+          livenessProbe:
+            {{- toYaml .Values.aggregator.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.aggregator.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.aggregator.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.aggregator.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config.toml
+              subPath: config.toml
+              readOnly: true
+            - name: secrets
+              mountPath: /etc/aggregator/secrets.toml
+              {{- if eq .Values.aggregator.secrets.app.type "externalSecret" }}
+              subPath: secrets.toml
+              {{- else }}
+              subPath: {{ .Values.aggregator.secrets.app.existingSecret.key }}
+              {{- end }}
+              readOnly: true
+            {{- with .Values.aggregator.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- with .Values.aggregator.extraContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "ccv-cell.aggregator.fullname" . }}-config
+        - name: secrets
+          secret:
+            secretName: {{ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app") }}
+        {{- with .Values.aggregator.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.aggregator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aggregator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aggregator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
