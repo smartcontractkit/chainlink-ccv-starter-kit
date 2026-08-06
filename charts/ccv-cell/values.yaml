@@ -136,8 +136,8 @@ verifier:
   # -- Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
   livenessProbe:
     httpGet:
-      path: /health/live
-      port: health
+      path: /health
+      port: http
     initialDelaySeconds: 15
     periodSeconds: 15
     failureThreshold: 10
@@ -145,7 +145,7 @@ verifier:
   # -- Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
   readinessProbe:
     httpGet:
-      path: /health/ready
+      path: /ready
       port: bootstrap-info
     initialDelaySeconds: 5
     periodSeconds: 10
@@ -153,8 +153,8 @@ verifier:
   # -- Startup probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
   startupProbe:
     # httpGet:
-    #   path: /health/ready
-    #   port: health
+    #   path: /ready
+    #   port: bootstrap-info
     # initialDelaySeconds: 5
     # periodSeconds: 5
     # failureThreshold: 20
