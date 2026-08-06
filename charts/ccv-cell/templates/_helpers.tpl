@@ -102,22 +102,6 @@ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subCompon
 {{- end -}}
 
 {{/*
-Renders ExternalSecret spec.data entries from a flat `keys` list — each key
-is used as both the resulting Secret's key name and the remote property
-name, pulled from a single remoteRef. Usage:
-  data:
-    {{- include "ccv-cell.secretData" .Values.verifier.secrets.db.externalSecret | nindent 4 }}
-*/}}
-{{- define "ccv-cell.secretData" -}}
-{{- range .keys }}
-- secretKey: {{ . }}
-  remoteRef:
-    key: {{ $.remoteRef }}
-    property: {{ . }}
-{{- end }}
-{{- end -}}
-
-{{/*
 Full image reference for a component (verifier/aggregator), e.g.:
   {{ include "ccv-cell.image" (dict "root" $ "component" "verifier") }}
 Global registry is the default, each component supplies its own repository and tag/digest.

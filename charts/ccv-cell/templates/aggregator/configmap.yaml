@@ -13,9 +13,6 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
-  # Renders aggregator/config.documented.toml (see upstream
-  # docs/config/README.md). Inbound HMAC client credentials are NOT here —
-  # they come from the Secrets this chart's ExternalSecret objects create.
   config.toml: |
     [server]
     address = {{ .Values.aggregator.config.server.address | quote }}

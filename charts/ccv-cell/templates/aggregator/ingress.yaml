@@ -9,12 +9,6 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
   annotations:
-    # gRPC/HTTP2 end to end is a hard requirement (see Network exposure and
-    # Hostname/TLS constraints). The exact annotations are controller- and
-    # cloud-specific (GKE Ingress backend-config protocol: HTTP2; ALB gRPC
-    # target-type/protocol-version; Azure AGIC or a mesh's Gateway) and are
-    # the per-cloud design proposal's decision — set them here per that
-    # proposal, not left as chart defaults.
     {{- with .Values.aggregator.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
