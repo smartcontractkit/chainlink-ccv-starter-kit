@@ -1,0 +1,55 @@
+name: Pull Request
+
+on:
+  pull_request:
+    paths:
+      - "charts/**"
+
+jobs:
+  helm-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: "charts/**"
+          dir_names: "true"
+          dir_names_max_depth: "2"
+
+      - name: Determine changed charts
+        id: changed-charts
+        run: |
+          changedCharts=""
+          for chart in ${{ steps.changed-files.outputs.all_changed_and_modified_files }}; do
+            if [ -f "$chart/Chart.yaml" ]; then
+              changedCharts="$changedCharts $chart"
+            else
+              echo "The $chart folder does not contain a Chart.yaml file, skipping"
+            fi
+          done
+          echo "changed_charts=$changedCharts" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Helm
+        if: steps.changed-charts.outputs.changed_charts != ''
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Helm dependency build
+        if: steps.changed-charts.outputs.changed_charts != ''
+        run: |
+          for chart in ${{ steps.changed-charts.outputs.changed_charts }}; do
+            if [ -f "$chart/Chart.lock" ] || grep -q '^dependencies:' "$chart/Chart.yaml"; then
+              echo "Building dependencies for $chart"
+              helm dependency build "$chart"
+            fi
+          done
+
+      - name: Helm template
+        if: steps.changed-charts.outputs.changed_charts != ''
+        run: |
+          for chart in ${{ steps.changed-charts.outputs.changed_charts }}; do
+            echo "Running helm template in chart $chart"
+            helm template "$chart" --debug > /dev/null
+          done
