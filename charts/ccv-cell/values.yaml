@@ -97,8 +97,6 @@ aggregator:
           name: ""
         # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
         secretVersionResourceName: ""
-        # -- Filename the CSI driver mounts the secret content as.
-        fileName: "secrets.toml"
 
   # -- Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
@@ -123,7 +121,6 @@ aggregator:
     #    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See
     #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
     annotations: {}
-      # iam.gke.io/gcp-service-account: "GSA_NAME@GSA_PROJECT.iam.gserviceaccount.com"
     # -- Labels to add to the ServiceAccount.
     labels: {}
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
@@ -359,8 +356,6 @@ verifier:
           name: ""
         # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
         secretVersionResourceName: ""
-        # -- Filename the CSI driver mounts the secret content as.
-        fileName: "secrets.toml"
 
     bootstrap:
       # -- Annotations to add to the verifier bootstrap Secret.
@@ -409,8 +404,6 @@ verifier:
           name: ""
         # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
         secretVersionResourceName: ""
-        # -- Filename the CSI driver mounts the secret content as.
-        fileName: "secrets.toml"
 
   # -- Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
@@ -435,7 +428,6 @@ verifier:
     #    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See
     #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
     annotations: {}
-      # iam.gke.io/gcp-service-account: "GSA_NAME@GSA_PROJECT.iam.gserviceaccount.com"
     # -- Labels to add to the ServiceAccount.
     labels: {}
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.

@@ -86,7 +86,7 @@ app.kubernetes.io/component: aggregator
 
 {{/*
 Name of the K8s Secret (existingSecret/externalSecret) or SecretProviderClass (gcpSecretStore) backing a secret block.
-include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "bootstrap")
+include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app")
 */}}
 {{- define "ccv-cell.secretName" -}}
   {{- $componentRoot := index .root.Values .component -}}

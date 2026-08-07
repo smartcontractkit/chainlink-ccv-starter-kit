@@ -91,7 +91,7 @@ spec:
               {{- if eq .Values.verifier.secrets.bootstrap.type "externalSecret" }}
               subPath: secrets.toml
               {{- else if eq .Values.verifier.secrets.bootstrap.type "gcpSecretStore" }}
-              subPath: {{ .Values.verifier.secrets.bootstrap.gcpSecretStore.fileName }}
+              subPath: secrets.toml
               {{- else }}
               subPath: {{ .Values.verifier.secrets.bootstrap.existingSecret.key }}
               {{- end }}
@@ -101,7 +101,7 @@ spec:
               {{- if eq .Values.verifier.secrets.app.type "externalSecret" }}
               subPath: secrets.toml
               {{- else if eq .Values.verifier.secrets.app.type "gcpSecretStore" }}
-              subPath: {{ .Values.verifier.secrets.app.gcpSecretStore.fileName }}
+              subPath: secrets.toml
               {{- else }}
               subPath: {{ .Values.verifier.secrets.app.existingSecret.key }}
               {{- end }}

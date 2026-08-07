@@ -84,7 +84,7 @@ spec:
               {{- if eq .Values.aggregator.secrets.app.type "externalSecret" }}
               subPath: secrets.toml
               {{- else if eq .Values.aggregator.secrets.app.type "gcpSecretStore" }}
-              subPath: {{ .Values.aggregator.secrets.app.gcpSecretStore.fileName }}
+              subPath: secrets.toml
               {{- else }}
               subPath: {{ .Values.aggregator.secrets.app.existingSecret.key }}
               {{- end }}
