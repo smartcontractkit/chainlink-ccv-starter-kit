@@ -93,7 +93,7 @@ Kubernetes: `>= 1.19`
 | verifier.image.repository | string | `"w0i8p0z9/chainlink-ccv-verifier"` | Image repository. |
 | verifier.image.tag | string | `"PLACEHOLDER"` | Image tag. Mutually exclusive with `digest`. |
 | verifier.labels | object | `{}` | Labels to add to the verifier Deployment object. |
-| verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health/live","port":"health"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
+| verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"http"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |
 | verifier.networkPolicy.enabled | bool | `false` | Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
 | verifier.networkPolicy.ingress | list | `[{"from":[{"podSelector":{}}]}]` | Ingress rules for the NetworkPolicy. Each rule's `ports` defaults to the verifier's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
@@ -103,7 +103,7 @@ Kubernetes: `>= 1.19`
 | verifier.podLabels | object | `{}` | Labels to add to the verifier pods. |
 | verifier.podResources | object | `{}` | CPU/memory resource requests and limits for init/sidecar containers. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | verifier.podSecurityContext | object | `{"seccompProfile":{"type":"RuntimeDefault"}}` | Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
-| verifier.readinessProbe | object | `{"httpGet":{"path":"/health/ready","port":"bootstrap-info"},"initialDelaySeconds":5,"periodSeconds":10}` | Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
+| verifier.readinessProbe | object | `{"httpGet":{"path":"/ready","port":"bootstrap-info"},"initialDelaySeconds":5,"periodSeconds":10}` | Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.resources | object | `{}` | CPU/memory resource requests and limits for the verifier container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | verifier.secrets.app.annotations | object | `{}` | Annotations to add to the verifier app Secret. |
 | verifier.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
