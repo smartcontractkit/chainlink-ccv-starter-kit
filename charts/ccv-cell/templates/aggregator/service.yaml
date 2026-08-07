@@ -13,9 +13,6 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  # Usually ClusterIP behind ingress/httpRoute below (the cloud/operator load
-  # balancer is the real public entry point), but not restricted to it — set
-  # NodePort/LoadBalancer if this Service needs to be reachable without one.
   type: {{ .Values.aggregator.service.type }}
   {{- with .Values.aggregator.service.clusterIP }}
   clusterIP: {{ . }}

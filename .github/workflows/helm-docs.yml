@@ -1,0 +1,59 @@
+name: helm-docs
+
+on:
+  pull_request:
+    paths:
+      - "charts/**"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-charts:
+    runs-on: ubuntu-latest
+    outputs:
+      charts: ${{ steps.changed-charts.outputs.charts }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: "charts/**"
+          dir_names: "true"
+          dir_names_max_depth: "2"
+
+      - name: Determine changed charts
+        id: changed-charts
+        run: |
+          charts="[]"
+          for chart in ${{ steps.changed-files.outputs.all_changed_and_modified_files }}; do
+            if [ -f "$chart/Chart.yaml" ]; then
+              charts=$(echo "$charts" | jq -c --arg c "$chart" '. + [$c]')
+            else
+              echo "$chart does not contain a Chart.yaml file, skipping"
+            fi
+          done
+          echo "charts=$charts" >> "$GITHUB_OUTPUT"
+
+  check-docs:
+    needs: detect-charts
+    if: needs.detect-charts.outputs.charts != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chart: ${{ fromJson(needs.detect-charts.outputs.charts) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Run helm-docs
+        uses: losisin/helm-docs-github-action@3a4528e97c49a5e83de6b78c50c61c8ee5c9f944 # v2.0.0
+        with:
+          chart-search-root: ${{ matrix.chart }}
+          fail-on-diff: true
+          version: v1.14.2

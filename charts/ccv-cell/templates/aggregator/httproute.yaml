@@ -1,10 +1,3 @@
-{{/*
-  Gateway API alternative to ingress.yaml — same "Network exposure" note
-  applies (see aggregator.ingress in values.yaml): public, unauthenticated
-  read path by design, HTTP/2 end to end, stable hostname, TLS terminated on
-  the referenced Gateway (out of this chart's scope). Routes exclusively to
-  the grpc port; the health port is only reachable in-cluster.
-*/}}
 {{- if and .Values.aggregator.enabled .Values.aggregator.httpRoute.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

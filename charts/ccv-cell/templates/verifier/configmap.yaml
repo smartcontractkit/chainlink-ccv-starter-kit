@@ -13,21 +13,6 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
-  # Renders verifier/committee/config.documented.toml (see upstream
-  # docs/config/README.md). Secrets referenced here (DB URL, aggregator HMAC
-  # keys) are NOT in this file — they reach the container via
-  # COMMITTEE_VERIFIER_SECRETS_PATH, sourced from the Secret this chart's
-  # ExternalSecret creates.
-  #
-  # bootstrap-config.toml is a SEPARATE file, read via BOOTSTRAPPER_CONFIG_PATH,
-  # matching the separate docs/config/bootstrap/config.documented.toml
-  # namespace upstream (its own config surface, distinct from the committee
-  # verifier's own config.toml below). app_config_mode = "local_app_config" is
-  # load-bearing: it switches the embedded bootstrap package from its default
-  # "JD" (Job Distributor) mode — there is no Job Distributor to connect to in
-  # a standalone brownfield deployment — to loading the committee verifier's
-  # own app config straight off disk, from the path named by
-  # local_app_config_path.
   bootstrap-config.toml: |
     app_config_mode = "local_app_config"
     local_app_config_path = "/etc/committee-verifier/config.toml"
