@@ -67,9 +67,12 @@ Kubernetes: `>= 1.19`
 | aggregator.secrets.app.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
 | aggregator.secrets.app.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. |
 | aggregator.secrets.app.externalSecret.storageUrlRemoteRef | object | `{}` | RemoteRef for the storage URL secret. |
+| aggregator.secrets.app.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `aggregator.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
+| aggregator.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| aggregator.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | aggregator.secrets.app.labels | object | `{}` | Labels to add to the aggregator app Secret. |
-| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret` or `existingSecret`. |
-| aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. |
+| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`. |
+| aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | aggregator.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the aggregator. |
 | aggregator.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | aggregator.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |
@@ -117,8 +120,11 @@ Kubernetes: `>= 1.19`
 | verifier.secrets.app.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret. |
 | verifier.secrets.app.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
 | verifier.secrets.app.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. |
+| verifier.secrets.app.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
+| verifier.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.app.labels | object | `{}` | Labels to add to the verifier app Secret. |
-| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret` or `existingSecret`. |
+| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`. |
 | verifier.secrets.bootstrap.annotations | object | `{}` | Annotations to add to the verifier bootstrap Secret. |
 | verifier.secrets.bootstrap.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.bootstrap.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the bootstrap secret. |
@@ -126,12 +132,15 @@ Kubernetes: `>= 1.19`
 | verifier.secrets.bootstrap.externalSecret.keystorePasswordRemoteRef | object | `{}` | RemoteRef for the keystore password (only when `keystoreBackend` is `postgres`). |
 | verifier.secrets.bootstrap.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
 | verifier.secrets.bootstrap.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. |
+| verifier.secrets.bootstrap.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
+| verifier.secrets.bootstrap.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.bootstrap.keystoreBackend | string | `"postgres"` | Keystore backend: `postgres` or `kms`. |
 | verifier.secrets.bootstrap.kms.ecdsaKeyId | string | `""` | AWS KMS key ID for the ECDSA key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
-| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret` or `existingSecret`. |
-| verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. |
+| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`. |
+| verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | verifier.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |

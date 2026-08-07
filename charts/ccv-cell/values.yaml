@@ -54,7 +54,7 @@ aggregator:
       # -- Labels to add to the aggregator app Secret.
       labels: {}
 
-      # -- Secret provisioning strategy: `externalSecret` or `existingSecret`.
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.
       type: externalSecret
 
       existingSecret:
@@ -88,6 +88,16 @@ aggregator:
           #   secretKeyRemoteRef:
           #     key: /some/path/for/client-1-secret
 
+      # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+      #    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `aggregator.serviceAccount` as described in
+      #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
   # -- Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
 
@@ -107,7 +117,9 @@ aggregator:
   serviceAccount:
     # -- Create a dedicated ServiceAccount for the aggregator.
     create: true
-    # -- Annotations to add to the ServiceAccount.
+    # -- Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),
+    #    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See
+    #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
     annotations: {}
     # -- Labels to add to the ServiceAccount.
     labels: {}
@@ -330,7 +342,7 @@ verifier:
       # -- Labels to add to the verifier app Secret.
       labels: {}
 
-      # -- Secret provisioning strategy: `externalSecret` or `existingSecret`.
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.
       type: externalSecret
 
       existingSecret:
@@ -361,6 +373,16 @@ verifier:
           #   secretKeyRemoteRef:
           #     key: /some/path/for/aggregator-1-secret
 
+      # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+      #    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in
+      #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
     bootstrap:
       # -- Annotations to add to the verifier bootstrap Secret.
       annotations: {}
@@ -376,7 +398,7 @@ verifier:
         # -- AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`).
         ed25519KeyId: ""  # "arn:aws:kms:us-east-1:...:key/def456-..."
 
-      # -- Secret provisioning strategy: `externalSecret` or `existingSecret`.
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.
       type: externalSecret
 
       existingSecret:
@@ -399,6 +421,16 @@ verifier:
         # -- RemoteRef for the keystore password (only when `keystoreBackend` is `postgres`).
         keystorePasswordRemoteRef: {}
 
+      # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+      #    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in
+      #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
   # -- Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
 
@@ -418,7 +450,9 @@ verifier:
   serviceAccount:
     # -- Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider.
     create: true
-    # -- Annotations to add to the ServiceAccount.
+    # -- Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),
+    #    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See
+    #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
     annotations: {}
     # -- Labels to add to the ServiceAccount.
     labels: {}

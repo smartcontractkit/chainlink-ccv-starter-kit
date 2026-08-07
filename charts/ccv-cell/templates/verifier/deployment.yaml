@@ -90,6 +90,8 @@ spec:
               mountPath: /etc/bootstrap/secrets.toml
               {{- if eq .Values.verifier.secrets.bootstrap.type "externalSecret" }}
               subPath: secrets.toml
+              {{- else if eq .Values.verifier.secrets.bootstrap.type "gcpSecretStore" }}
+              subPath: secrets.toml
               {{- else }}
               subPath: {{ .Values.verifier.secrets.bootstrap.existingSecret.key }}
               {{- end }}
@@ -97,6 +99,8 @@ spec:
             - name: secrets-app
               mountPath: /etc/committee-verifier/secrets.toml
               {{- if eq .Values.verifier.secrets.app.type "externalSecret" }}
+              subPath: secrets.toml
+              {{- else if eq .Values.verifier.secrets.app.type "gcpSecretStore" }}
               subPath: secrets.toml
               {{- else }}
               subPath: {{ .Values.verifier.secrets.app.existingSecret.key }}
@@ -113,11 +117,27 @@ spec:
           configMap:
             name: {{ include "ccv-cell.verifier.fullname" . }}-config
         - name: secrets-app
+          {{- if eq .Values.verifier.secrets.app.type "gcpSecretStore" }}
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "app") }}
+          {{- else }}
           secret:
             secretName: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "app") }}
+          {{- end }}
         - name: secrets-bootstrap
+          {{- if eq .Values.verifier.secrets.bootstrap.type "gcpSecretStore" }}
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "bootstrap") }}
+          {{- else }}
           secret:
             secretName: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "bootstrap") }}
+          {{- end }}
         {{- with .Values.verifier.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

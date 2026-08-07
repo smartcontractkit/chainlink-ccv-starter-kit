@@ -85,19 +85,22 @@ app.kubernetes.io/component: aggregator
 {{- end -}}
 
 {{/*
-include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "bootstrap")
+Name of the K8s Secret (existingSecret/externalSecret) or SecretProviderClass (gcpSecretStore) backing a secret block.
+include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app")
 */}}
 {{- define "ccv-cell.secretName" -}}
   {{- $componentRoot := index .root.Values .component -}}
   {{- $secret := index $componentRoot.secrets .subComponent -}}
+  {{- $default := printf "%s-%s-%s" (include "ccv-cell.fullname" .root) .component .subComponent -}}
 
   {{- if eq $secret.type "existingSecret" -}}
       {{- required (printf "Secret '%s' for the %s is of type 'existingSecret', but no name was provided" .subComponent .component) $secret.existingSecret.name -}}
   {{- else if eq $secret.type "externalSecret" -}}
-    {{- $default := printf "%s-%s-%s" (include "ccv-cell.fullname" .root) .component .subComponent -}}
     {{- $secret.externalSecret.name | default $default -}}
+  {{- else if eq $secret.type "gcpSecretStore" -}}
+    {{- $secret.gcpSecretStore.secretProviderClass.name | default $default -}}
   {{- else -}}
-    {{- fail (printf "invalid secret type %q (must be existingSecret or externalSecret)" $secret.type) -}}
+    {{- fail (printf "invalid secret type %q (must be existingSecret, externalSecret, or gcpSecretStore)" $secret.type) -}}
   {{- end -}}
 {{- end -}}
 
