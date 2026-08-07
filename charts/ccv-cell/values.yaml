@@ -12,12 +12,100 @@ nameOverride: ""
 # -- Override the fully-qualified resource name.
 fullnameOverride: ""
 
-verifier:
-  # -- Enable the verifier component.
+aggregator:
+  # -- Enable the aggregator component.
   enabled: true
 
+  image:
+    # -- OCI registry, overrides `global.image.registry` when set.
+    registry: ""
+    # -- Image repository.
+    repository: w0i8p0z9/chainlink-ccv-aggregator
+    # -- Image tag. Mutually exclusive with `digest`.
+    tag: "PLACEHOLDER"
+    # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
+    digest: ""
+    # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
+    pullPolicy: IfNotPresent
+
+  # @ignored
+  # Application config is not yet finalized.
+  config:
+    server:
+      address: ":50051"
+
+    clients: ""
+    # example:
+    # clients: |
+    #     [[clients]]
+    #     name = "partner-op-verifier"
+
+  configMap:
+    # -- Annotations to add to the aggregator ConfigMap.
+    annotations: {}
+    # -- Labels to add to the aggregator ConfigMap.
+    labels: {}
+
+
+  secrets:
+    app:
+      # -- Annotations to add to the aggregator app Secret.
+      annotations: {}
+      # -- Labels to add to the aggregator app Secret.
+      labels: {}
+
+      # -- Secret provisioning strategy: `externalSecret` or `existingSecret`.
+      type: externalSecret
+
+      existingSecret:
+        # -- Name of an existing Kubernetes Secret to use as the app secret.
+        name: ""
+        # -- Key inside the existing Secret that holds the secrets file.
+        key: "secrets.toml"
+
+      externalSecret:
+        # -- Name of the ExternalSecret resource to create.
+        name: ""
+        # -- SecretStore reference for the ExternalSecret.
+        secretStoreRef:
+          name: ""
+          kind: ClusterSecretStore
+
+        # -- RemoteRef for the storage URL secret.
+        storageUrlRemoteRef: {}
+          # key: /some/path/for/storage-url/
+
+        # -- Per-client API/secret key remote refs.
+        clients: []
+          # - clientId: client-0
+          #   apiKeyRemoteRef:
+          #     key: /some/path/for/client-0-api
+          #   secretKeyRemoteRef:
+          #     key: /some/path/for/client-0-secret
+          # - clientId: client-2
+          #   apiKeyRemoteRef:
+          #     key: /some/path/for/client-1-api
+          #   secretKeyRemoteRef:
+          #     key: /some/path/for/client-1-secret
+
+  # -- Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
+  env: []
+
+  # -- Extra envFrom sources (ConfigMaps / Secrets) for the aggregator container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
+  envFrom: []
+
+  # -- Init containers prepended to the aggregator pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
+  extraInitContainers: []
+  # - name: init
+  #   image: busybox
+
+  # -- Sidecar containers appended to the aggregator pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates).
+  extraContainers: []
+  # - name: sidecar
+  #   image: busybox
+
   serviceAccount:
-    # -- Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider.
+    # -- Create a dedicated ServiceAccount for the aggregator.
     create: true
     # -- Annotations to add to the ServiceAccount.
     annotations: {}
@@ -26,57 +114,92 @@ verifier:
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
     name: ""
 
-  # -- Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
-  podSecurityContext:
-    seccompProfile:
-      type: RuntimeDefault
-
-  image:
-    # -- OCI registry; overrides `global.image.registry` when set.
-    registry: ""
-    # -- Image repository.
-    repository: w0i8p0z9/chainlink-ccv-verifier
-    # -- Image tag. Mutually exclusive with `digest`.
-    tag: "PLACEHOLDER"
-    # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: ""
-    # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
-    pullPolicy: IfNotPresent
-
-  # -- Annotations to add to the verifier Deployment object.
+  # -- Annotations to add to the aggregator Deployment object.
   annotations: {}
-  # -- Labels to add to the verifier Deployment object.
+  # -- Labels to add to the aggregator Deployment object.
   labels: {}
 
-  # -- Annotations to add to the verifier pods.
+  # -- Annotations to add to the aggregator pods.
   podAnnotations: {}
-  # -- Labels to add to the verifier pods.
+  # -- Labels to add to the aggregator pods.
   podLabels: {}
-
-  configMap:
-    # -- Annotations to add to the verifier ConfigMap.
-    annotations: {}
-    # -- Labels to add to the verifier ConfigMap.
-    labels: {}
 
   # @ignored
   # Ports are not yet finalized.
   ports:
-    bootstrapInfo: 9988
+    grpc: 50051
+    health: 8080
+
+  # @ignored
+  # Service configuration is not yet finalized.
+  service:
+    type: ClusterIP
+    clusterIP: ""
+    annotations: {}
+    labels: {}
+
+  ingress:
+    # -- Enable an Ingress for the aggregator gRPC endpoint.
+    enabled: false
+
+    # -- Ingress class name. See [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/).
+    #    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers
+    #    require annotations, while others support it out of the box.
+    className: ""
+
+    # -- Annotations to add to the Ingress (e.g. controller-specific TLS/HTTP2 or gRPC wiring).
+    annotations: {}
+    # -- Labels to add to the Ingress.
+    labels: {}
+
+    # -- Hostname for the aggregator. Treat as stable, changing it requires updating every peer and the indexer.
+    host: "your-ccv-aggregator.example.com"
+
+    tls:
+      # -- Enable TLS for the Ingress.
+      enabled: false
+      # -- Name of the TLS Secret.
+      secretName: ""
+
+  httpRoute:
+    # -- Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Mutually independent of `ingress.enabled`.
+    enabled: false
+
+    # -- Annotations to add to the HTTPRoute.
+    annotations: {}
+    # -- Labels to add to the HTTPRoute.
+    labels: {}
+
+    # -- Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).
+    #    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers
+    #    require annotations, while others support it out of the box.
+    parentRefs: []
+    # - group: gateway.networking.k8s.io
+    #   kind: Gateway
+    #   name: gateway
+    #   namespace: istio-ingress
+
+    # -- Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).
+    #    Treat as stable, changing it requires updating every peer and the indexer.
+    hostnames: []
+    # - your-ccv-aggregator.example.com
 
   networkPolicy:
-    # -- Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+    # -- Enable a NetworkPolicy for the aggregator. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
     enabled: false
+
     # -- Annotations to add to the NetworkPolicy.
     annotations: {}
+
     # -- Labels to add to the NetworkPolicy.
     labels: {}
-    # -- Ingress rules for the NetworkPolicy. Each rule's `ports` defaults to the verifier's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+
+    # -- Ingress rules for the NetworkPolicy. When enabled, add a rule allowing traffic from your ingress/gateway controller. Each rule's `ports` defaults to the aggregator's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
     ingress:
       - from:
           - podSelector: {}
 
-  # -- CPU/memory resource requests and limits for the verifier container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+  # -- CPU/memory resource requests and limits for the aggregator container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
   resources: {}
     # limits:
     #   cpu: 1500m
@@ -94,6 +217,45 @@ verifier:
     #   cpu: 1
     #   memory: 1Gi
 
+  # -- Liveness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: health
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    failureThreshold: 10
+
+  # -- Readiness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+  # -- Startup probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+  startupProbe:
+    # httpGet:
+    #   path: /health/ready
+    #   port: health
+    # initialDelaySeconds: 5
+    # periodSeconds: 5
+    # failureThreshold: 20
+
+  # -- Extra volumes appended to the aggregator pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
+  extraVolumes: []
+  # - name: extra-ca-bundle
+  #   configMap:
+  #     name: extra-ca-bundle
+
+  # -- Extra volume mounts appended to the aggregator container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
+  extraVolumeMounts: []
+  # - name: extra-ca-bundle
+  #   mountPath: /etc/ssl/certs/extra-ca.pem
+  #   subPath: extra-ca.pem
+  #   readOnly: true
+
   # -- Node selector for pod scheduling. See [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector).
   nodeSelector: {}
   # -- Tolerations for pod scheduling. See [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
@@ -101,76 +263,39 @@ verifier:
   # -- Affinity rules for pod scheduling. See [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity).
   affinity: {}
 
-  # -- Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
-  extraVolumeMounts: []
-  # - name: extra-ca-bundle
-  #   mountPath: /etc/ssl/certs/extra-ca.pem
-  #   subPath: extra-ca.pem
-  #   readOnly: true
-
-  # -- Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
-  extraVolumes: []
-  # - name: extra-ca-bundle
-  #   configMap:
-  #     name: extra-ca-bundle
-
-  # -- Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates).
-  extraContainers: []
-  # - name: sidecar
-  #   image: busybox
-
-  # -- Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
-  extraInitContainers: []
-  # - name: init
-  #   image: busybox
+  # -- Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
 
   # -- Share a single process namespace across all containers in the pod. See [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/).
   shareProcessNamespace: false
 
-  # -- Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
-  env: []
+verifier:
+  # -- Enable the verifier component.
+  enabled: true
 
-  # -- Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
-  envFrom: []
-
-  # -- Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
-  livenessProbe:
-    httpGet:
-      path: /health
-      port: http
-    initialDelaySeconds: 15
-    periodSeconds: 15
-    failureThreshold: 10
-
-  # -- Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
-  readinessProbe:
-    httpGet:
-      path: /ready
-      port: bootstrap-info
-    initialDelaySeconds: 5
-    periodSeconds: 10
-
-  # -- Startup probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
-  startupProbe:
-    # httpGet:
-    #   path: /ready
-    #   port: bootstrap-info
-    # initialDelaySeconds: 5
-    # periodSeconds: 5
-    # failureThreshold: 20
-
-  # @ignored
-  # Service configuration is not yet finalized.
-  service:
-    type: ClusterIP
-    annotations: {}
-    labels: {}
-    ports:
-      http: 8100
+  image:
+    # -- OCI registry; overrides `global.image.registry` when set.
+    registry: ""
+    # -- Image repository.
+    repository: w0i8p0z9/chainlink-ccv-verifier
+    # -- Image tag. Mutually exclusive with `digest`.
+    tag: "PLACEHOLDER"
+    # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
+    digest: ""
+    # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
+    pullPolicy: IfNotPresent
 
   # @ignored
   # Application config is not yet finalized.
   config: {}
+
+  configMap:
+    # -- Annotations to add to the verifier ConfigMap.
+    annotations: {}
+    # -- Labels to add to the verifier ConfigMap.
+    labels: {}
 
   secrets:
     app:
@@ -248,12 +373,24 @@ verifier:
         # -- RemoteRef for the keystore password (only when `keystoreBackend` is `postgres`).
         keystorePasswordRemoteRef: {}
 
-aggregator:
-  # -- Enable the aggregator component.
-  enabled: true
+  # -- Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
+  env: []
+
+  # -- Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
+  envFrom: []
+
+  # -- Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
+  extraInitContainers: []
+  # - name: init
+  #   image: busybox
+
+  # -- Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates).
+  extraContainers: []
+  # - name: sidecar
+  #   image: busybox
 
   serviceAccount:
-    # -- Create a dedicated ServiceAccount for the aggregator.
+    # -- Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider.
     create: true
     # -- Annotations to add to the ServiceAccount.
     annotations: {}
@@ -262,30 +399,43 @@ aggregator:
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
     name: ""
 
-  # -- Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
-  podSecurityContext:
-    seccompProfile:
-      type: RuntimeDefault
+  # -- Annotations to add to the verifier Deployment object.
+  annotations: {}
+  # -- Labels to add to the verifier Deployment object.
+  labels: {}
 
-  image:
-    # -- OCI registry, overrides `global.image.registry` when set.
-    registry: ""
-    # -- Image repository.
-    repository: w0i8p0z9/chainlink-ccv-aggregator
-    # -- Image tag. Mutually exclusive with `digest`.
-    tag: "PLACEHOLDER"
-    # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: ""
-    # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
-    pullPolicy: IfNotPresent
+  # -- Annotations to add to the verifier pods.
+  podAnnotations: {}
+  # -- Labels to add to the verifier pods.
+  podLabels: {}
 
   # @ignored
   # Ports are not yet finalized.
   ports:
-    grpc: 50051
-    health: 8080
+    bootstrapInfo: 9988
 
-  # -- CPU/memory resource requests and limits for the aggregator container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+  # @ignored
+  # Service configuration is not yet finalized.
+  service:
+    type: ClusterIP
+    annotations: {}
+    labels: {}
+    ports:
+      http: 8100
+
+  networkPolicy:
+    # -- Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+    enabled: false
+    # -- Annotations to add to the NetworkPolicy.
+    annotations: {}
+    # -- Labels to add to the NetworkPolicy.
+    labels: {}
+    # -- Ingress rules for the NetworkPolicy. Each rule's `ports` defaults to the verifier's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+    ingress:
+      - from:
+          - podSelector: {}
+
+  # -- CPU/memory resource requests and limits for the verifier container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
   resources: {}
     # limits:
     #   cpu: 1500m
@@ -303,6 +453,45 @@ aggregator:
     #   cpu: 1
     #   memory: 1Gi
 
+  # -- Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    failureThreshold: 10
+
+  # -- Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: bootstrap-info
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+  # -- Startup probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
+  startupProbe:
+    # httpGet:
+    #   path: /ready
+    #   port: bootstrap-info
+    # initialDelaySeconds: 5
+    # periodSeconds: 5
+    # failureThreshold: 20
+
+  # -- Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
+  extraVolumes: []
+  # - name: extra-ca-bundle
+  #   configMap:
+  #     name: extra-ca-bundle
+
+  # -- Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
+  extraVolumeMounts: []
+  # - name: extra-ca-bundle
+  #   mountPath: /etc/ssl/certs/extra-ca.pem
+  #   subPath: extra-ca.pem
+  #   readOnly: true
+
   # -- Node selector for pod scheduling. See [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector).
   nodeSelector: {}
   # -- Tolerations for pod scheduling. See [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
@@ -310,198 +499,10 @@ aggregator:
   # -- Affinity rules for pod scheduling. See [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity).
   affinity: {}
 
-  # -- Extra volume mounts appended to the aggregator container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
-  extraVolumeMounts: []
-  # - name: extra-ca-bundle
-  #   mountPath: /etc/ssl/certs/extra-ca.pem
-  #   subPath: extra-ca.pem
-  #   readOnly: true
-
-  # -- Extra volumes appended to the aggregator pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
-  extraVolumes: []
-  # - name: extra-ca-bundle
-  #   configMap:
-  #     name: extra-ca-bundle
-
-  # -- Sidecar containers appended to the aggregator pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates).
-  extraContainers: []
-  # - name: sidecar
-  #   image: busybox
-
-  # -- Init containers prepended to the aggregator pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
-  extraInitContainers: []
-  # - name: init
-  #   image: busybox
+  # -- Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
 
   # -- Share a single process namespace across all containers in the pod. See [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/).
   shareProcessNamespace: false
-
-  # -- Annotations to add to the aggregator Deployment object.
-  annotations: {}
-  # -- Labels to add to the aggregator Deployment object.
-  labels: {}
-
-  # -- Annotations to add to the aggregator pods.
-  podAnnotations: {}
-  # -- Labels to add to the aggregator pods.
-  podLabels: {}
-
-  configMap:
-    # -- Annotations to add to the aggregator ConfigMap.
-    annotations: {}
-    # -- Labels to add to the aggregator ConfigMap.
-    labels: {}
-
-  # @ignored
-  # Application config is not yet finalized.
-  config:
-    server:
-      address: ":50051"
-
-    clients: ""
-    # example:
-    # clients: |
-    #     [[clients]]
-    #     name = "partner-op-verifier"
-
-  secrets:
-    app:
-      # -- Annotations to add to the aggregator app Secret.
-      annotations: {}
-      # -- Labels to add to the aggregator app Secret.
-      labels: {}
-
-      # -- Secret provisioning strategy: `externalSecret` or `existingSecret`.
-      type: externalSecret
-
-      existingSecret:
-        # -- Name of an existing Kubernetes Secret to use as the app secret.
-        name: ""
-        # -- Key inside the existing Secret that holds the secrets file.
-        key: "secrets.toml"
-
-      externalSecret:
-        # -- Name of the ExternalSecret resource to create.
-        name: ""
-        # -- SecretStore reference for the ExternalSecret.
-        secretStoreRef:
-          name: ""
-          kind: ClusterSecretStore
-
-        # -- RemoteRef for the storage URL secret.
-        storageUrlRemoteRef: {}
-          # key: /some/path/for/storage-url/
-
-        # -- Per-client API/secret key remote refs.
-        clients: []
-          # - clientId: client-0
-          #   apiKeyRemoteRef:
-          #     key: /some/path/for/client-0-api
-          #   secretKeyRemoteRef:
-          #     key: /some/path/for/client-0-secret
-          # - clientId: client-2
-          #   apiKeyRemoteRef:
-          #     key: /some/path/for/client-1-api
-          #   secretKeyRemoteRef:
-          #     key: /some/path/for/client-1-secret
-
-  # -- Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
-  env: []
-
-  # -- Extra envFrom sources (ConfigMaps / Secrets) for the aggregator container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
-  envFrom: []
-
-  # -- Liveness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
-  livenessProbe:
-    httpGet:
-      path: /health/live
-      port: health
-    initialDelaySeconds: 15
-    periodSeconds: 15
-    failureThreshold: 10
-
-  # -- Readiness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
-  readinessProbe:
-    httpGet:
-      path: /health/ready
-      port: health
-    initialDelaySeconds: 5
-    periodSeconds: 10
-
-  # -- Startup probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
-  startupProbe:
-    # httpGet:
-    #   path: /health/ready
-    #   port: health
-    # initialDelaySeconds: 5
-    # periodSeconds: 5
-    # failureThreshold: 20
-
-  # @ignored
-  # Service configuration is not yet finalized.
-  service:
-    type: ClusterIP
-    clusterIP: ""
-    annotations: {}
-    labels: {}
-
-  ingress:
-    # -- Enable an Ingress for the aggregator gRPC endpoint.
-    enabled: false
-
-    # -- Ingress class name. See [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/).
-    #    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers
-    #    require annotations, while others support it out of the box.
-    className: ""
-
-    # -- Annotations to add to the Ingress (e.g. controller-specific TLS/HTTP2 or gRPC wiring).
-    annotations: {}
-    # -- Labels to add to the Ingress.
-    labels: {}
-
-    # -- Hostname for the aggregator. Treat as stable, changing it requires updating every peer and the indexer.
-    host: "your-ccv-aggregator.example.com"
-
-    tls:
-      # -- Enable TLS for the Ingress.
-      enabled: false
-      # -- Name of the TLS Secret.
-      secretName: ""
-
-  httpRoute:
-    # -- Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Mutually independent of `ingress.enabled`.
-    enabled: false
-
-    # -- Annotations to add to the HTTPRoute.
-    annotations: {}
-    # -- Labels to add to the HTTPRoute.
-    labels: {}
-
-    # -- Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).
-    #    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers
-    #    require annotations, while others support it out of the box.
-    parentRefs: []
-    # - group: gateway.networking.k8s.io
-    #   kind: Gateway
-    #   name: gateway
-    #   namespace: istio-ingress
-
-    # -- Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).
-    #    Treat as stable, changing it requires updating every peer and the indexer.
-    hostnames: []
-    # - your-ccv-aggregator.example.com
-
-  networkPolicy:
-    # -- Enable a NetworkPolicy for the aggregator. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
-    enabled: false
-
-    # -- Annotations to add to the NetworkPolicy.
-    annotations: {}
-
-    # -- Labels to add to the NetworkPolicy.
-    labels: {}
-
-    # -- Ingress rules for the NetworkPolicy. When enabled, add a rule allowing traffic from your ingress/gateway controller. Each rule's `ports` defaults to the aggregator's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
-    ingress:
-      - from:
-          - podSelector: {}
