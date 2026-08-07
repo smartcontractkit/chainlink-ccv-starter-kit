@@ -161,13 +161,9 @@ aggregator:
       # -- Name of the TLS Secret.
       secretName: ""
 
-  # -- Enable a Gateway API GRPCRoute for the aggregator gRPC endpoint. **Preferred over `httpRoute`** when your
-  #    gateway controller supports it — GRPCRoute is the purpose-built Gateway API resource for gRPC traffic
-  #    (method-aware routing, gRPC-status-aware filters), whereas HTTPRoute has to treat gRPC as opaque HTTP/2.
-  #    GRPCRoute only reached GA in Gateway API v1.1 (later than HTTPRoute), so controller support is narrower —
-  #    `httpRoute` is provided as a fallback for controllers that don't yet implement GRPCRoute. Mutually
-  #    independent of `ingress.enabled` and `httpRoute.enabled`; enable whichever your controller actually supports.
   grpcRoute:
+    # -- Enable a Gateway API GRPCRoute for the aggregator gRPC endpoint. **Preferred over `httpRoute`** when your
+    #    gateway controller supports it. Mutually independent of `ingress.enabled` and `httpRoute.enabled`.
     enabled: false
 
     # -- Annotations to add to the GRPCRoute.
@@ -189,10 +185,10 @@ aggregator:
     hostnames: []
     # - your-ccv-aggregator.example.com
 
-  # -- Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Only needed as a fallback when your gateway
-  #    controller doesn't yet support GRPCRoute (see `grpcRoute` above, which is preferred for gRPC traffic when
-  #    available). Mutually independent of `ingress.enabled` and `grpcRoute.enabled`.
   httpRoute:
+    # -- Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Only needed as a fallback when your gateway
+    #    controller doesn't yet support GRPCRoute (see `grpcRoute` above, which is preferred for gRPC traffic when
+    #    available). Mutually independent of `ingress.enabled` and `grpcRoute.enabled`.
     enabled: false
 
     # -- Annotations to add to the HTTPRoute.
