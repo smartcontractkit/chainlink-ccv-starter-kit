@@ -161,8 +161,34 @@ aggregator:
       # -- Name of the TLS Secret.
       secretName: ""
 
+  grpcRoute:
+    # -- Enable a Gateway API GRPCRoute for the aggregator gRPC endpoint. **Preferred over `httpRoute`** when your
+    #    gateway controller supports it. Mutually independent of `ingress.enabled` and `httpRoute.enabled`.
+    enabled: false
+
+    # -- Annotations to add to the GRPCRoute.
+    annotations: {}
+    # -- Labels to add to the GRPCRoute.
+    labels: {}
+
+    # -- Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-grpcroute).
+    #    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers
+    #    require annotations, while others support it out of the box.
+    parentRefs: []
+    # - group: gateway.networking.k8s.io
+    #   kind: Gateway
+    #   name: gateway
+    #   namespace: istio-ingress
+
+    # -- Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-grpcroute).
+    #    Treat as stable, changing it requires updating every peer and the indexer.
+    hostnames: []
+    # - your-ccv-aggregator.example.com
+
   httpRoute:
-    # -- Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Mutually independent of `ingress.enabled`.
+    # -- Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Only needed as a fallback when your gateway
+    #    controller doesn't yet support GRPCRoute (see `grpcRoute` above, which is preferred for gRPC traffic when
+    #    available). Mutually independent of `ingress.enabled` and `grpcRoute.enabled`.
     enabled: false
 
     # -- Annotations to add to the HTTPRoute.

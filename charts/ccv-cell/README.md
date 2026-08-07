@@ -25,8 +25,13 @@ Kubernetes: `>= 1.19`
 | aggregator.extraInitContainers | list | `[]` | Init containers prepended to the aggregator pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | aggregator.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the aggregator container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
 | aggregator.extraVolumes | list | `[]` | Extra volumes appended to the aggregator pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
+| aggregator.grpcRoute.annotations | object | `{}` | Annotations to add to the GRPCRoute. |
+| aggregator.grpcRoute.enabled | bool | `false` | Enable a Gateway API GRPCRoute for the aggregator gRPC endpoint. **Preferred over `httpRoute`** when your    gateway controller supports it. Mutually independent of `ingress.enabled` and `httpRoute.enabled`. |
+| aggregator.grpcRoute.hostnames | list | `[]` | Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-grpcroute).    Treat as stable, changing it requires updating every peer and the indexer. |
+| aggregator.grpcRoute.labels | object | `{}` | Labels to add to the GRPCRoute. |
+| aggregator.grpcRoute.parentRefs | list | `[]` | Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-grpcroute).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
 | aggregator.httpRoute.annotations | object | `{}` | Annotations to add to the HTTPRoute. |
-| aggregator.httpRoute.enabled | bool | `false` | Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Mutually independent of `ingress.enabled`. |
+| aggregator.httpRoute.enabled | bool | `false` | Enable a Gateway API HTTPRoute for the aggregator gRPC endpoint. Only needed as a fallback when your gateway    controller doesn't yet support GRPCRoute (see `grpcRoute` above, which is preferred for gRPC traffic when    available). Mutually independent of `ingress.enabled` and `grpcRoute.enabled`. |
 | aggregator.httpRoute.hostnames | list | `[]` | Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Treat as stable, changing it requires updating every peer and the indexer. |
 | aggregator.httpRoute.labels | object | `{}` | Labels to add to the HTTPRoute. |
 | aggregator.httpRoute.parentRefs | list | `[]` | Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
