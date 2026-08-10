@@ -474,15 +474,6 @@ verifier:
   ports:
     bootstrapInfo: 9988
 
-  # @ignored
-  # Service configuration is not yet finalized.
-  service:
-    type: ClusterIP
-    annotations: {}
-    labels: {}
-    ports:
-      http: 8100
-
   networkPolicy:
     # -- Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
     enabled: false
