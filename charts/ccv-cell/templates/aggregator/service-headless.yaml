@@ -1,0 +1,22 @@
+{{- if .Values.aggregator.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ccv-cell.aggregator.fullname" . }}-headless
+  labels:
+    {{- include "ccv-cell.aggregator.labels" . | nindent 4 }}
+    {{- with .Values.aggregator.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "ccv-cell.aggregator.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: grpc
+      port: {{ .Values.aggregator.ports.grpc }}
+      targetPort: grpc
+    - name: health
+      port: {{ .Values.aggregator.ports.health }}
+      targetPort: health
+{{- end }}

@@ -1,6 +1,6 @@
 {{- if .Values.aggregator.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "ccv-cell.aggregator.fullname" . }}
   labels:
@@ -13,9 +13,8 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  serviceName: {{ include "ccv-cell.aggregator.fullname" . }}-headless
   replicas: 1
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       {{- include "ccv-cell.aggregator.selectorLabels" . | nindent 6 }}
