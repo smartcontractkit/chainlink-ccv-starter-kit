@@ -9,4 +9,6 @@ keywords:
   - ccip
   - ccv
   - cross-chain-verifier
-home: https://github.com/smartcontractkit/chainlink-ccv
+home: https://github.com/smartcontractkit/chainlink-ccv-starter-kit
+sources:
+  - https://github.com/smartcontractkit/chainlink-ccv

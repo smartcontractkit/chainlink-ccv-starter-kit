@@ -1,0 +1,54 @@
+{{ template "chart.header" . }}
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+### Cluster Dependencies
+
+In your Kubernetes cluster, you'll need:
+- Some kind of Ingress or Gateway controller that supports HTTP/2 and gRPC. The Aggregator exposes a public gRPC
+  endpoint that must be accessible from the other cells.
+- Due to the gRPC communication, you'll most likely need meshing. Both [Istio](https://istio.io/) and
+  [Linkerd](https://linkerd.io/) are viable options, with Istio also being able to serve as your Gateway controller.
+
+### External Dependencies
+
+A CCV Cell also has a few external pre-requisites for a production grade deployment, not covered by this chart:
+- PostgreSQL cluster, minimum version 15:
+  - We recommend at least a standby replica for HA.
+  - All connections must be encrypted.
+  - Three logical databases: `bootstrap`, used by the bootstrap process; `verifier`, used by the verifier application to
+    hold chain state; and `aggregator`, used to store verifications the aggregator receives.
+  - We further recommend that the `bootstrap` and `verifier` databases are placed on one cluster, and the `aggregator`
+    database be placed on another. This implementation detail may vary depending on your infrastructure.
+- A secrets manager:
+  - The chart currently has first class support for [External Secrets Operator](https://external-secrets.io/) and [GCP's
+    Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+  - If you use some other secrets manager, you should instead use the "existing secret" mechanism and manage the secret
+    yourself.
+  - Never directly provide credentials through the chart's values. Values should be versioned in your VCS, and are no
+    place for secrets.
+- A Key Management Service (KMS) solution:
+  - While the application supports holding the signing key in PostgreSQL, this is not recommended for production.
+  - Instead, use a managed service for signing.
+- A Cloud IAM Service Account:
+  - Do not pass long-lived secrets, like access keys, to the pods.
+  - Instead, use your cloud's IAM offering (like AWS' EKS' IRSA or GCP's GKE's Workload Identity Federation) to provide
+    credentials to pods through IAM.
+  - The Service Account must provide access for the secrets and KMS described above.
+
+Note that, for security reasons, the external dependencies described above must not be shared between two deployments
+of a CCV Cell! Doing so could introduce single points of failure that make your committee vulnerable if a single cell
+is compromised.
+
+{{ template "chart.valuesSection" . }}
