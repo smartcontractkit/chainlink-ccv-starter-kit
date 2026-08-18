@@ -68,7 +68,7 @@ spec:
               protocol: TCP
               containerPort: 8100
             - name: bootstrap-info
-              containerPort: {{ .Values.verifier.ports.bootstrapInfo }}
+              containerPort: {{ .Values.verifier.bootstrap.config.server.listen_port }}
           livenessProbe:
             {{- toYaml .Values.verifier.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -83,7 +83,7 @@ spec:
               subPath: bootstrap-config.toml
               readOnly: true
             - name: config
-              mountPath: /etc/committee-verifier/config.toml
+              mountPath: {{ .Values.verifier.bootstrap.config.local_app_config_path }}
               subPath: config.toml
               readOnly: true
             - name: secrets-bootstrap

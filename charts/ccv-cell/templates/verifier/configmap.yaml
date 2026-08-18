@@ -14,43 +14,30 @@ metadata:
   {{- end }}
 data:
   bootstrap-config.toml: |
-    app_config_mode = "local_app_config"
-    local_app_config_path = "/etc/committee-verifier/config.toml"
+{{- $cfg := deepCopy .Values.verifier.bootstrap.config }}
+{{- $_ := set $cfg "app_config_mode" "local_app_config" }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.server "keys" (list "listen_port")) }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.Monitoring.Beholder "keys" (list "MetricReaderInterval" "TraceBatchTimeout")) }}
+{{ $cfg | toToml | indent 4 }}
   config.toml: |
-    verifier_id = {{ .Values.verifier.config.verifierId | quote }}
-
-    {{- range .Values.verifier.config.aggregators }}
-
-    [[aggregators]]
-    name = {{ .name | quote }}
-    secret_name = {{ .secretName | quote }}
-    address = {{ .address | quote }}
-    insecure_connection = {{ .insecureConnection | default false }}
-    {{- if .maxSendMsgSizeBytes }}
-    max_send_msg_size_bytes = {{ .maxSendMsgSizeBytes }}
-    {{- end }}
-    {{- if .maxRecvMsgSizeBytes }}
-    max_recv_msg_size_bytes = {{ .maxRecvMsgSizeBytes }}
-    {{- end }}
-    {{- end }}
-
-    [committee_verifier_addresses]
-    {{- range $chain, $addr := .Values.verifier.config.committeeVerifierAddresses }}
-    {{ $chain }} = {{ $addr | quote }}
-    {{- end }}
-
-    [default_executor_on_ramp_addresses]
-    {{- range $chain, $addr := .Values.verifier.config.defaultExecutorOnRampAddresses }}
-    {{ $chain }} = {{ $addr | quote }}
-    {{- end }}
-
-    [on_ramp_addresses]
-    {{- range $chain, $addr := .Values.verifier.config.onRampAddresses }}
-    {{ $chain }} = {{ $addr | quote }}
-    {{- end }}
-
-    [rmn_remote_addresses]
-    {{- range $chain, $addr := .Values.verifier.config.rmnRemoteAddresses }}
-    {{ $chain }} = {{ $addr | quote }}
-    {{- end }}
+{{- $vcfg := .Values.verifier.config }}
+{{- $aggregators := list }}
+{{- range $vcfg.aggregators }}
+{{- $address := .address }}
+{{- if .useInClusterAggregator }}
+{{- if not $.Values.aggregator.enabled }}
+{{- fail (printf "verifier.config.aggregators: %q has useInClusterAggregator: true, but aggregator.enabled is false" .name) }}
+{{- end }}
+{{- $address = printf "%s:%d" (include "ccv-cell.aggregator.fullname" $) (int64 $.Values.aggregator.service.ports.grpc) }}
+{{- end }}
+{{- $aggregators = append $aggregators (dict
+      "name" .name
+      "secret_name" .secret_name
+      "address" $address
+      "insecure_connection" (or .useInClusterAggregator (.insecure_connection | default false))
+      "max_send_msg_size_bytes" (int64 (.max_send_msg_size_bytes | default 0))
+      "max_recv_msg_size_bytes" (int64 (.max_recv_msg_size_bytes | default 0))
+    ) }}
+{{- end }}
+{{ merge (dict "aggregators" $aggregators) $vcfg | toToml | indent 4 }}
 {{- end }}

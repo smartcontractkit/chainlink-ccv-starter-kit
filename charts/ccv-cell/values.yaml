@@ -22,23 +22,184 @@ aggregator:
     # -- Image repository.
     repository: w0i8p0z9/chainlink-ccv-aggregator
     # -- Image tag. Mutually exclusive with `digest`.
-    tag: "PLACEHOLDER"
+    tag: "v0.3.0"
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
     digest: ""
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
-  # @ignored
-  # Application config is not yet finalized.
+  # This tree is rendered into `config.toml` with `toToml` (see templates/aggregator/configmap.yaml).
+  #
+  # server.address is not set here: it's computed from `server.host`/`server.port` below — the
+  # container's own bind port. The Service's exposed port is separate: `aggregator.service.ports.grpc`.
+  #
+  # clients[].apiKeyPair is the legacy env-var-backed credential path, superseded by the secrets file this
+  # chart already provisions (see `clients[].apiKeyRemoteRef`/`secretKeyRemoteRef` below). Not set here.
   config:
-    server:
-      address: ":50051"
+    # -- Unique identifier for this aggregator instance. An empty value defaults to the pod's hostname,
+    #    which is already stable and unique per replica.
+    aggregatorID: ""
 
-    clients: ""
-    # example:
-    # clients: |
-    #     [[clients]]
-    #     name = "partner-op-verifier"
+    # -- Path to a generated config file merged over this one. Rarely needed.
+    generatedConfigPath: ""
+
+    # -- Pyroscope server URL for continuous profiling. An empty value disables it.
+    pyroscope_url: ""
+
+    # -- Maximum message IDs per batch request, from 1 to 1000.
+    maxMessageIDsPerBatch: 100
+
+    # -- Maximum verifier-result requests per batch, from 1 to 1000.
+    maxCommitVerifierNodeResultRequestsPerBatch: 100
+
+    # -- Signer quorums and destination verifiers this aggregator trusts. Empty by default: this is
+    #    deployment-specific and has no safe default.
+    committee:
+      # -- Quorum config per source chain selector.
+      quorumConfigs: {}
+      # "1":
+      #   sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
+      #   threshold: 1
+      #   signers:
+      #     - address: "0x00000000000000000000000000000000000000b1"
+
+      # -- Destination verifier contract address per destination chain selector.
+      destinationVerifiers: {}
+      # "2": "0x00000000000000000000000000000000000000c2"
+
+    server:
+      # -- Port the gRPC server listens on.
+      port: 50051
+      # -- Host the gRPC server binds to. Leave empty to bind all interfaces, which is almost always
+      #    what you want in a container.
+      host: ""
+      # -- Maximum duration for any gRPC request.
+      requestTimeout: "10s"
+      # -- Timeout for connection establishment. Empty uses the gRPC default (no timeout).
+      connectionTimeout: "0s"
+      # -- Minimum time between client pings. Empty uses the gRPC default (5m).
+      keepaliveMinTime: "0s"
+      # -- Time after which the server pings idle clients. Empty uses the gRPC default (2h).
+      keepaliveTime: "0s"
+      # -- Timeout for a ping ack before closing the connection. Empty uses the gRPC default (20s).
+      keepaliveTimeout: "0s"
+      # -- Forces connections closed after this duration. Empty uses the gRPC default (no limit).
+      maxConnectionAge: "0s"
+      # -- Maximum message size the server can receive, in bytes. 0 uses the default (4MB).
+      maxRecvMsgSizeBytes: 0
+      # -- Maximum message size the server can send, in bytes. 0 uses the default (4MB).
+      maxSendMsgSizeBytes: 0
+
+    storage:
+      # -- Storage backend. Only `postgres` is supported.
+      type: postgres
+      # -- Records fetched per page in paginated queries.
+      pageSize: 100
+      # -- Maximum open database connections.
+      maxOpenConns: 25
+      # -- Maximum idle database connections.
+      maxIdleConns: 5
+      # -- Maximum lifetime of a database connection.
+      connMaxLifetime: "1h0m0s"
+      # -- Maximum time a database connection may sit idle before it's closed.
+      connMaxIdleTime: "5m0s"
+      # -- Timeout for a single database query.
+      queryTimeout: "10s"
+
+    # -- Authenticated API clients. `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when
+    #    `aggregator.secrets.app.type` is `externalSecret`) tell the ExternalSecret where to fetch the
+    #    matching API key/secret key for this same `clientId`. Both are chart-only fields and are not
+    #    written to `config.toml`.
+    clients: []
+    # - clientId: client-1
+    #   groups: ["default"]
+    #   enabled: true
+    #   apiKeyRemoteRef:
+    #     key: /some/path/for/client-1-api
+    #   secretKeyRemoteRef:
+    #     key: /some/path/for/client-1-secret
+
+    aggregation:
+      # -- Buffer size of the aggregation request channel.
+      channelBufferSize: 200
+      # -- Number of background workers processing aggregation requests.
+      backgroundWorkerCount: 10
+      # -- Timeout for each aggregation operation. 0 disables the timeout.
+      operationTimeout: "0s"
+      # -- How long shutdown waits for in-flight aggregation workers before proceeding anyway.
+      drainTimeout: "10s"
+      # -- Maximum consecutive errors before aggregation is considered failed. 0 disables the check.
+      maxConsecutiveErrors: 0
+
+    messageDisablementRules:
+      # -- How often the in-memory message-disablement registry refreshes from the database.
+      refreshInterval: "30s"
+
+    orphanRecovery:
+      # -- Enable recovery of orphaned aggregation records.
+      enabled: false
+      # -- How often orphan recovery runs.
+      interval: "5m0s"
+      # -- Timeout for each check-aggregation operation.
+      checkAggregationTimeout: "5s"
+      # -- Maximum age of orphan records to consider for recovery. Older records are skipped.
+      maxAge: "168h0m0s"
+      # -- Timeout for each orphan recovery scan.
+      scanTimeout: "4m0s"
+      # -- Maximum consecutive errors before orphan recovery is considered failed.
+      maxConsecutiveErrors: 3
+      # -- Maximum orphans processed per scan cycle.
+      maxOrphansPerScan: 10000
+      # -- Orphaned keys fetched per database page during a scan.
+      pageSize: 100
+
+    heartbeat:
+      # -- Heartbeat storage backend: `memory` or `redis`.
+      storeType: memory
+
+    rateLimiting:
+      # -- Enable rate limiting.
+      enabled: false
+      storage:
+        # -- Rate-limit storage backend: `memory` or `redis`.
+        type: memory
+
+    healthCheck:
+      # -- Enable the health-check HTTP server. This chart's liveness/readiness probes require it; do
+      #    not disable it unless you replace those probes too.
+      enabled: true
+      # -- Port the health-check HTTP server listens on.
+      port: 8080
+
+    monitoring:
+      # -- Log level for the service logger.
+      LogLevel: info
+      Pyroscope:
+        # -- Enable Pyroscope telemetry.
+        Enabled: false
+        # -- Remote endpoint of the Pyroscope service.
+        URL: ""
+      Beholder:
+        # -- Enable Beholder telemetry.
+        Enabled: false
+        # -- Disable TLS for the Beholder client.
+        InsecureConnection: false
+        # -- Path to the CA certificate file for the Beholder client.
+        CACertFile: ""
+        # -- gRPC endpoint for the Beholder client to send data to the collector.
+        OtelExporterGRPCEndpoint: ""
+        # -- HTTP endpoint for the Beholder client to send data to the collector.
+        OtelExporterHTTPEndpoint: ""
+        # -- Enable log streaming to the collector.
+        LogStreamingEnabled: false
+        # -- Minimum log level to stream to Beholder.
+        LogStreamingLevel: info
+        # -- Interval to scrape metrics, in seconds.
+        MetricReaderInterval: 0
+        # -- Ratio of traces to sample.
+        TraceSampleRatio: 0.0
+        # -- Timeout for a batch of traces.
+        TraceBatchTimeout: 0
 
   configMap:
     # -- Annotations to add to the aggregator ConfigMap.
@@ -74,19 +235,6 @@ aggregator:
         # -- RemoteRef for the storage URL secret.
         storageUrlRemoteRef: {}
           # key: /some/path/for/storage-url/
-
-        # -- Per-client API/secret key remote refs.
-        clients: []
-          # - clientId: client-0
-          #   apiKeyRemoteRef:
-          #     key: /some/path/for/client-0-api
-          #   secretKeyRemoteRef:
-          #     key: /some/path/for/client-0-secret
-          # - clientId: client-2
-          #   apiKeyRemoteRef:
-          #     key: /some/path/for/client-1-api
-          #   secretKeyRemoteRef:
-          #     key: /some/path/for/client-1-secret
 
       # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
       #    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `aggregator.serviceAccount` as described in
@@ -136,19 +284,19 @@ aggregator:
   # -- Labels to add to the aggregator pods.
   podLabels: {}
 
-  # @ignored
-  # Ports are not yet finalized.
-  ports:
-    grpc: 50051
-    health: 8080
-
-  # @ignored
-  # Service configuration is not yet finalized.
   service:
+    # -- Service type. See [Service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
     type: ClusterIP
+    # -- Static ClusterIP to assign to the Service. Leave empty to let Kubernetes allocate one.
     clusterIP: ""
+    # -- Annotations to add to the aggregator Service.
     annotations: {}
+    # -- Labels to add to the aggregator Service.
     labels: {}
+    # -- Ports exposed by the Service.
+    ports:
+      grpc: 50051
+      health: 8080
 
   ingress:
     # -- Enable an Ingress for the aggregator gRPC endpoint.
@@ -319,15 +467,143 @@ verifier:
     # -- Image repository.
     repository: w0i8p0z9/chainlink-ccv-verifier
     # -- Image tag. Mutually exclusive with `digest`.
-    tag: "PLACEHOLDER"
+    tag: "v0.3.0"
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
     digest: ""
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
-  # @ignored
-  # Application config is not yet finalized.
-  config: {}
+  # This tree is rendered into `config.toml` with `toToml` (see templates/verifier/configmap.yaml).
+  #
+  # aggregator_address, insecure_aggregator_connection, aggregator_max_send_msg_size_bytes, and
+  # aggregator_max_recv_msg_size_bytes are the legacy single-aggregator fields. Not set here — use
+  # `aggregators` instead.
+  #
+  # monitoring is not set here. The app treats it as deprecated in favor of the bootstrap config (see
+  # `verifier.bootstrap.config.Monitoring`, which this chart already sets).
+  config:
+    # -- Unique identifier for this committee verifier instance. Set a different value for each verifier
+    #    in the committee.
+    verifier_id: ""
+
+    # -- Go duration string for the message-disablement-rules poll interval (e.g. `"2s"`). Empty uses the
+    #    integration default.
+    message_disablement_rules_poll_interval: "2s"
+
+    # -- Go duration string for the message-disablement-rules RPC timeout (e.g. `"500ms"`). Empty uses the
+    #    integration default.
+    message_disablement_rules_client_timeout: "500ms"
+
+    # -- On-chain address of this verifier's result-signing key. Set a different value for each verifier.
+    signer_address: ""
+
+    # -- Pyroscope server URL for continuous profiling. An empty value disables it.
+    pyroscope_url: ""
+
+    # -- Chain selectors, as strings, for which to disable the finality violation checker.
+    disable_finality_checkers: []
+
+    # -- Aggregators that this verifier writes to.
+    #    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set
+    #    `address` for any other aggregator. `secret_name` doubles as the credential lookup key for
+    #    `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when `verifier.secrets.app.type` is
+    #    `externalSecret`). `useInClusterAggregator`, `apiKeyRemoteRef`, and `secretKeyRemoteRef` are
+    #    chart-only fields and are not written to `config.toml`.
+    aggregators: []
+    # - name: aggregator-1
+    #   secret_name: aggregator_1
+    #   useInClusterAggregator: true
+    #   insecure_connection: false
+    #   max_send_msg_size_bytes: 4194304
+    #   max_recv_msg_size_bytes: 4194304
+    #   apiKeyRemoteRef:
+    #     key: /some/path/for/aggregator-1-api
+    #   secretKeyRemoteRef:
+    #     key: /some/path/for/aggregator-1-secret
+    # - name: aggregator-2
+    #   secret_name: aggregator_2
+    #   address: "aggregator-2.example.com:50051"
+    #   apiKeyRemoteRef:
+    #     key: /some/path/for/aggregator-2-api
+    #   secretKeyRemoteRef:
+    #     key: /some/path/for/aggregator-2-secret
+    #   insecure_connection: false
+
+    # -- Addresses of the committee verifiers, one per chain selector.
+    committee_verifier_addresses: {}
+    # "1": "0x00000000000000000000000000000000000000c1"
+
+    # -- Addresses of the default executor on-ramps, one per chain selector. Messages naming the default
+    #    executor are verified even if they don't name this committee verifier.
+    default_executor_on_ramp_addresses: {}
+    # "1": "0x00000000000000000000000000000000000000e1"
+
+    # -- Addresses of the on-ramps, one per chain selector.
+    on_ramp_addresses: {}
+    # "1": "0x00000000000000000000000000000000000000a1"
+
+    # -- Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection.
+    rmn_remote_addresses: {}
+    # "1": "0x00000000000000000000000000000000000000b1"
+
+  bootstrap:
+    # This tree is rendered into `bootstrap-config.toml` with `toToml` (see templates/verifier/configmap.yaml).
+    config:
+      # -- Path to the application config file for local mode. This file holds the application config,
+      #    not the bootstrap config.
+      local_app_config_path: /etc/committee-verifier/config.toml
+
+      server:
+        # -- Port for the bootstrap HTTP server.
+        listen_port: 9988
+
+      # -- List of chains where this node has a signing identity. Each entry registers the node's signing
+      #    key for that chain in JD. Empty performs no signing-key sync.
+      chains: []
+      # - type: EVM
+      #   id: "1"
+
+      # Adds an existing Chainlink node key to the keystore instead of generating one. Set only when
+      # migrating an operator off CL mode; requires `expected_id`.
+      # key_import:
+      #   path: /etc/ccv/migration/key.json
+      #   password_path: /etc/ccv/migration/export-password.txt
+      #   expected_id: "0x0123456789abcdef0123456789abcdef01234567"
+
+      Monitoring:
+        # -- Log level for the service logger.
+        LogLevel: info
+
+        Pyroscope:
+          # -- Enable Pyroscope telemetry.
+          Enabled: false
+          # -- Remote endpoint of the Pyroscope service.
+          URL: "http://pyroscope:4040"
+
+        Beholder:
+          # -- Enable Beholder telemetry.
+          Enabled: false
+          # -- Disable TLS for the Beholder client.
+          InsecureConnection: true
+          # -- Path to the CA certificate file for the Beholder client.
+          CACertFile: /etc/ssl/certs/otel-collector.pem
+          # -- gRPC endpoint for the Beholder client to send data to the collector.
+          OtelExporterGRPCEndpoint: "otel-collector:4317"
+          # -- HTTP endpoint for the Beholder client to send data to the collector.
+          OtelExporterHTTPEndpoint: "otel-collector:4318"
+          # -- Enable log streaming to the collector.
+          LogStreamingEnabled: false
+          # -- Minimum log level to stream to Beholder.
+          LogStreamingLevel: info
+          # -- Interval to scrape metrics, in seconds.
+          MetricReaderInterval: 60
+          # -- Ratio of traces to sample.
+          TraceSampleRatio: 0.1
+          # -- Timeout for a batch of traces, in seconds.
+          TraceBatchTimeout: 5
+          # -- Extra labels to add during OTel transmission.
+          TelemetryAttributes: {}
+          # env: production
 
   configMap:
     # -- Annotations to add to the verifier ConfigMap.
@@ -359,19 +635,6 @@ verifier:
 
         # -- RemoteRef for the database URL secret.
         dbUrlRemoteRef: {}
-
-        # -- Per-aggregator API/secret key remote refs.
-        aggregators: []
-          # - secretName: aggregator_0
-          #   apiKeyRemoteRef:
-          #     key: /some/path/for/aggregator-0-api
-          #   secretKeyRemoteRef:
-          #     key: /some/path/for/aggregator-0-secret
-          # - secretName: aggregator_1
-          #   apiKeyRemoteRef:
-          #     key: /some/path/for/aggregator-1-api
-          #   secretKeyRemoteRef:
-          #     key: /some/path/for/aggregator-1-secret
 
       # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
       #    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in
@@ -469,11 +732,6 @@ verifier:
   # -- Labels to add to the verifier pods.
   podLabels: {}
 
-  # @ignored
-  # Ports are not yet finalized.
-  ports:
-    bootstrapInfo: 9988
-
   networkPolicy:
     # -- Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
     enabled: false
@@ -508,7 +766,7 @@ verifier:
   livenessProbe:
     httpGet:
       path: /health
-      port: http
+      port: bootstrap-info
     initialDelaySeconds: 15
     periodSeconds: 15
     failureThreshold: 10
@@ -516,8 +774,8 @@ verifier:
   # -- Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
   readinessProbe:
     httpGet:
-      path: /ready
-      port: bootstrap-info
+      path: /health
+      port: http
     initialDelaySeconds: 5
     periodSeconds: 10
 
@@ -526,9 +784,8 @@ verifier:
     # httpGet:
     #   path: /ready
     #   port: bootstrap-info
-    # initialDelaySeconds: 5
     # periodSeconds: 5
-    # failureThreshold: 20
+    # failureThreshold: 30
 
   # -- Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/).
   extraVolumes: []

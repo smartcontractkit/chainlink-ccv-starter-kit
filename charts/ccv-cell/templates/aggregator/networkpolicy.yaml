@@ -28,8 +28,8 @@ spec:
         {{- if .ports }}
         {{- toYaml .ports | nindent 8 }}
         {{- else }}
-        - port: {{ $.Values.aggregator.ports.grpc }}
-        - port: {{ $.Values.aggregator.ports.health }}
+        - port: grpc
+        - port: health
         {{- end }}
     {{- end }}
 {{- end }}

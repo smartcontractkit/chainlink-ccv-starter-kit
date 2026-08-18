@@ -125,3 +125,15 @@ Global registry is the default, each component supplies its own repository and t
     {{- printf "%s:%s" $repo $image.tag -}}
   {{- end -}}
 {{- end -}}
+
+{{/*
+Casts each key in .keys to int64 within map .m, in place. Values loaded from values.yaml render as
+float64, and toToml then renders whole numbers as floats (e.g. "9988.0" instead of "9988"), which a
+strict TOML decoder rejects for integer fields. Usage:
+  {{ include "ccv-cell.castInts" (dict "m" $cfg.server "keys" (list "maxRecvMsgSizeBytes" "maxSendMsgSizeBytes")) }}
+*/}}
+{{- define "ccv-cell.castInts" -}}
+{{- range .keys }}
+{{- $_ := set $.m . (int64 (index $.m .)) }}
+{{- end }}
+{{- end -}}

@@ -62,9 +62,9 @@ spec:
             {{- toYaml .Values.aggregator.envFrom | nindent 12 }}
           ports:
             - name: grpc
-              containerPort: {{ .Values.aggregator.ports.grpc }}
+              containerPort: {{ .Values.aggregator.config.server.port }}
             - name: health
-              containerPort: {{ .Values.aggregator.ports.health }}
+              containerPort: {{ .Values.aggregator.config.healthCheck.port }}
           livenessProbe:
             {{- toYaml .Values.aggregator.livenessProbe | nindent 12 }}
           readinessProbe:

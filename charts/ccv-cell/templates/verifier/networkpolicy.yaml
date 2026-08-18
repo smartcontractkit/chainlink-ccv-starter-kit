@@ -28,8 +28,8 @@ spec:
         {{- if .ports }}
         {{- toYaml .ports | nindent 8 }}
         {{- else }}
-        - port: {{ $.Values.verifier.ports.http }}
-        - port: {{ $.Values.verifier.ports.bootstrapInfo }}
+        - port: http
+        - port: bootstrap-info
         {{- end }}
     {{- end }}
 {{- end }}

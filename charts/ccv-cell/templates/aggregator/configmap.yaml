@@ -14,18 +14,28 @@ metadata:
   {{- end }}
 data:
   config.toml: |
-    [server]
-    address = {{ .Values.aggregator.config.server.address | quote }}
-
-    [healthCheck]
-    port = {{ .Values.aggregator.ports.health | quote }}
-
-    [rateLimiting]
-    enabled = false
-
-    [heartbeat]
-    storeType = "memory"
-
-    {{ .Values.aggregator.config.clients | nindent 4 }}
-
+{{- $cfg := deepCopy .Values.aggregator.config }}
+{{- $clients := list }}
+{{- range $cfg.clients }}
+{{- $clients = append $clients (dict
+      "clientId" .clientId
+      "groups" (ternary .groups (list "default") (hasKey . "groups"))
+      "enabled" (ternary .enabled true (hasKey . "enabled"))
+    ) }}
+{{- end }}
+{{- $_ := set $cfg "clients" $clients }}
+{{- range $qc := $cfg.committee.quorumConfigs }}
+{{- $_ := set $qc "threshold" (int64 $qc.threshold) }}
+{{- end }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg "keys" (list "maxMessageIDsPerBatch" "maxCommitVerifierNodeResultRequestsPerBatch")) }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.server "keys" (list "maxRecvMsgSizeBytes" "maxSendMsgSizeBytes")) }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.storage "keys" (list "pageSize" "maxOpenConns" "maxIdleConns")) }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.aggregation "keys" (list "channelBufferSize" "backgroundWorkerCount" "maxConsecutiveErrors")) }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.orphanRecovery "keys" (list "maxConsecutiveErrors" "maxOrphansPerScan" "pageSize")) }}
+{{- include "ccv-cell.castInts" (dict "m" $cfg.monitoring.Beholder "keys" (list "MetricReaderInterval" "TraceBatchTimeout")) }}
+{{- $_ := set $cfg.server "address" (printf "%s:%d" $cfg.server.host (int64 $cfg.server.port)) }}
+{{- $_ := unset $cfg.server "host" }}
+{{- $_ := unset $cfg.server "port" }}
+{{- $_ := set $cfg.healthCheck "port" (toString (int64 $cfg.healthCheck.port)) }}
+{{ $cfg | toToml | indent 4 }}
 {{- end }}

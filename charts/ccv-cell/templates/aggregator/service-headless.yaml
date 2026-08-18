@@ -14,9 +14,9 @@ spec:
     {{- include "ccv-cell.aggregator.selectorLabels" . | nindent 4 }}
   ports:
     - name: grpc
-      port: {{ .Values.aggregator.ports.grpc }}
+      port: {{ .Values.aggregator.service.ports.grpc }}
       targetPort: grpc
     - name: health
-      port: {{ .Values.aggregator.ports.health }}
+      port: {{ .Values.aggregator.service.ports.health }}
       targetPort: health
 {{- end }}
