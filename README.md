@@ -12,10 +12,13 @@ pre-commit install
 
 As a fallback, you can run manually via the plugin or Docker:
 ```bash
-helm-docs --chart-search-root=charts
+helm-docs --chart-search-root=charts --template-files=README.md.gotmpl
 # or
-docker run --rm --volume "$PWD:/helm-docs" -u "$(id -u)" jnorwood/helm-docs:v1.14.2 --chart-search-root=charts
+docker run --rm --volume "$PWD:/helm-docs" -u "$(id -u)" jnorwood/helm-docs:v1.14.2 --chart-search-root=charts --template-files=README.md.gotmpl
 ```
+
+Custom content (e.g. usage notes, instructions, etc.) can be added to a chart's docs by editing its `README.md.gotmpl`
+file, found at the chart's root directory.
 
 Do note the version of helm-docs being used in either the [.pre-commit-config.yaml](.pre-commit-config.yaml) file or
 the [CI workflow](.github/workflows/helm-docs.yml). Small version changes can cause subtle differences in the output

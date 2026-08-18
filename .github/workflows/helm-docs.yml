@@ -55,5 +55,6 @@ jobs:
         uses: losisin/helm-docs-github-action@3a4528e97c49a5e83de6b78c50c61c8ee5c9f944 # v2.0.0
         with:
           chart-search-root: ${{ matrix.chart }}
+          template-files: README.md.gotmpl
           fail-on-diff: true
           version: v1.14.2

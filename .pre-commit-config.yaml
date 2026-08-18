@@ -6,3 +6,4 @@ repos:
         entry: jnorwood/helm-docs@sha256:7e562b49ab6b1dbc50c3da8f2dd6ffa8a5c6bba327b1c6335cc15ce29267979c
         args:
           - --chart-search-root=charts
+          - --template-files=README.md.gotmpl
