@@ -1,0 +1,22 @@
+{{- if .Values.verifier.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ccv-cell.verifier.fullname" . }}-headless
+  labels:
+    {{- include "ccv-cell.verifier.labels" . | nindent 4 }}
+    {{- with .Values.verifier.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "ccv-cell.verifier.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 8100
+      targetPort: http
+    - name: bootstrap-info
+      port: {{ .Values.verifier.bootstrap.config.server.listen_port }}
+      targetPort: bootstrap-info
+{{- end }}

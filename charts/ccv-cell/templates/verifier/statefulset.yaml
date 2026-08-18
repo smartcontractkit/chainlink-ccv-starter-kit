@@ -1,6 +1,6 @@
 {{- if .Values.verifier.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "ccv-cell.verifier.fullname" . }}
   labels:
@@ -13,9 +13,8 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  serviceName: {{ include "ccv-cell.verifier.fullname" . }}-headless
   replicas: 1
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       {{- include "ccv-cell.verifier.selectorLabels" . | nindent 6 }}
