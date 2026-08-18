@@ -3,7 +3,7 @@ name: ccv-cell
 description: Chainlink CCIP 2.0 CCV Cell deployment, including aggregator and verifier
 type: application
 version: 0.1.0
-kubeVersion: ">= 1.19"
+kubeVersion: ">= 1.19.0-0"
 keywords:
   - chainlink
   - ccip

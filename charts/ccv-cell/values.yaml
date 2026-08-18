@@ -22,9 +22,9 @@ aggregator:
     # -- Image repository.
     repository: w0i8p0z9/chainlink-ccv-aggregator
     # -- Image tag. Mutually exclusive with `digest`.
-    tag: "v0.3.0"
+    tag: ""
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: ""
+    digest: "sha256:1a710e583bddc86d70c390763f795d90c725abd0b97d252481137df9caf51502"
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
@@ -52,8 +52,9 @@ aggregator:
     # -- Maximum verifier-result requests per batch, from 1 to 1000.
     maxCommitVerifierNodeResultRequestsPerBatch: 100
 
-    # -- Signer quorums and destination verifiers this aggregator trusts. Empty by default: this is
-    #    deployment-specific and has no safe default.
+    # -- Signer quorums and destination verifiers this aggregator trusts. Empty by default:
+    #    deployment-specific, no safe default. Hard requirement: the aggregator refuses to start
+    #    without at least one entry in both `quorumConfigs` and `destinationVerifiers`.
     committee:
       # -- Quorum config per source chain selector.
       quorumConfigs: {}
@@ -108,8 +109,9 @@ aggregator:
 
     # -- Authenticated API clients. `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when
     #    `aggregator.secrets.app.type` is `externalSecret`) tell the ExternalSecret where to fetch the
-    #    matching API key/secret key for this same `clientId`. Both are chart-only fields and are not
-    #    written to `config.toml`.
+    #    matching API key/secret key for this same `clientId`. Both are chart-only fields, not written
+    #    to `config.toml`. `api_key` must be a UUID, `secret_key` must be hex-encoded — the aggregator
+    #    rejects other formats at startup.
     clients: []
     # - clientId: client-1
     #   groups: ["default"]
@@ -467,9 +469,9 @@ verifier:
     # -- Image repository.
     repository: w0i8p0z9/chainlink-ccv-verifier
     # -- Image tag. Mutually exclusive with `digest`.
-    tag: "v0.3.0"
+    tag: ""
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: ""
+    digest: "sha256:e5699c9c957eff9f1bd01a30a67579ede17f96831eefe639327598369bd6572b"
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
@@ -508,7 +510,8 @@ verifier:
     #    `address` for any other aggregator. `secret_name` doubles as the credential lookup key for
     #    `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when `verifier.secrets.app.type` is
     #    `externalSecret`). `useInClusterAggregator`, `apiKeyRemoteRef`, and `secretKeyRemoteRef` are
-    #    chart-only fields and are not written to `config.toml`.
+    #    chart-only fields, not written to `config.toml`. `api_key` must be a UUID, `secret_key` must
+    #    be hex-encoded, matching the target aggregator's config for this client.
     aggregators: []
     # - name: aggregator-1
     #   secret_name: aggregator_1
@@ -529,7 +532,9 @@ verifier:
     #     key: /some/path/for/aggregator-2-secret
     #   insecure_connection: false
 
-    # -- Addresses of the committee verifiers, one per chain selector.
+    # -- Addresses of the committee verifiers, one per chain selector. Paired with `on_ramp_addresses`:
+    #    at least one chain needs both, or the verifier fails to start ("no enabled/initialized chain
+    #    sources") — an `evm.config.chains` entry alone isn't enough.
     committee_verifier_addresses: {}
     # "1": "0x00000000000000000000000000000000000000c1"
 
@@ -538,7 +543,8 @@ verifier:
     default_executor_on_ramp_addresses: {}
     # "1": "0x00000000000000000000000000000000000000e1"
 
-    # -- Addresses of the on-ramps, one per chain selector.
+    # -- Addresses of the on-ramps, one per chain selector. Paired with `committee_verifier_addresses`
+    #    above — see that field.
     on_ramp_addresses: {}
     # "1": "0x00000000000000000000000000000000000000a1"
 
@@ -604,6 +610,26 @@ verifier:
           # -- Extra labels to add during OTel transmission.
           TelemetryAttributes: {}
           # env: production
+
+  evm:
+    # This tree is rendered into `evm.toml` with `toToml` (see templates/verifier/configmap.yaml).
+    config:
+      # -- RPC and finality settings per EVM chain, keyed by chain selector. Empty by default: this is
+      #    deployment-specific and has no safe default.
+      chains: {}
+      # "1":
+      #   #    Number of blocks required before a head is considered final. 0 enables finality-tag
+      #   #    mode; a positive value uses confirmation-depth mode.
+      #   finality_depth: 0
+      #   #    Retry cadence for TXM v2, as a Go duration string. This is not the chain's actual block
+      #   #    time. 0 uses the standalone default; non-zero values must be at least 2 seconds.
+      #   txm_block_time: "2s"
+      #   # RPC endpoints used to reach this chain.
+      #   nodes:
+      #     - name: node-1
+      #       http_url: "http://rpc-url.com"
+      #       ws_url: "ws://rpc-url.com"
+      #       order: 1
 
   configMap:
     # -- Annotations to add to the verifier ConfigMap.

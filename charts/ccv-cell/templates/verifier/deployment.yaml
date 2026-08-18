@@ -60,6 +60,8 @@ spec:
               value: /etc/bootstrap/secrets.toml
             - name: COMMITTEE_VERIFIER_SECRETS_PATH
               value: /etc/committee-verifier/secrets.toml
+            - name: EVM_CONFIG_PATH
+              value: /etc/evm/config.toml
             {{- with .Values.verifier.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -87,6 +89,10 @@ spec:
             - name: config
               mountPath: {{ .Values.verifier.bootstrap.config.local_app_config_path }}
               subPath: config.toml
+              readOnly: true
+            - name: config
+              mountPath: /etc/evm/config.toml
+              subPath: evm.toml
               readOnly: true
             - name: secrets-bootstrap
               mountPath: /etc/bootstrap/secrets.toml
@@ -121,7 +127,7 @@ spec:
         - name: secrets-app
           {{- if eq .Values.verifier.secrets.app.type "gcpSecretStore" }}
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: secrets-store-gke.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "app") }}
@@ -132,7 +138,7 @@ spec:
         - name: secrets-bootstrap
           {{- if eq .Values.verifier.secrets.bootstrap.type "gcpSecretStore" }}
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: secrets-store-gke.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "ccv-cell.secretName" (dict "root" . "component" "verifier" "subComponent" "bootstrap") }}

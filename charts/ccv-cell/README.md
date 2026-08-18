@@ -22,8 +22,8 @@ Kubernetes: `>= 1.19`
 | aggregator.config.aggregation.maxConsecutiveErrors | int | `0` | Maximum consecutive errors before aggregation is considered failed. 0 disables the check. |
 | aggregator.config.aggregation.operationTimeout | string | `"0s"` | Timeout for each aggregation operation. 0 disables the timeout. |
 | aggregator.config.aggregatorID | string | `""` | Unique identifier for this aggregator instance. An empty value defaults to the pod's hostname,    which is already stable and unique per replica. |
-| aggregator.config.clients | list | `[]` | Authenticated API clients. `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when    `aggregator.secrets.app.type` is `externalSecret`) tell the ExternalSecret where to fetch the    matching API key/secret key for this same `clientId`. Both are chart-only fields and are not    written to `config.toml`. |
-| aggregator.config.committee | object | `{"destinationVerifiers":{},"quorumConfigs":{}}` | Signer quorums and destination verifiers this aggregator trusts. Empty by default: this is    deployment-specific and has no safe default. |
+| aggregator.config.clients | list | `[]` | Authenticated API clients. `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when    `aggregator.secrets.app.type` is `externalSecret`) tell the ExternalSecret where to fetch the    matching API key/secret key for this same `clientId`. Both are chart-only fields, not written    to `config.toml`. `api_key` must be a UUID, `secret_key` must be hex-encoded — the aggregator    rejects other formats at startup. |
+| aggregator.config.committee | object | `{"destinationVerifiers":{},"quorumConfigs":{}}` | Signer quorums and destination verifiers this aggregator trusts. Empty by default:    deployment-specific, no safe default. Hard requirement: the aggregator refuses to start    without at least one entry in both `quorumConfigs` and `destinationVerifiers`. |
 | aggregator.config.committee.destinationVerifiers | object | `{}` | Destination verifier contract address per destination chain selector. |
 | aggregator.config.committee.quorumConfigs | object | `{}` | Quorum config per source chain selector. |
 | aggregator.config.generatedConfigPath | string | `""` | Path to a generated config file merged over this one. Rarely needed. |
@@ -93,11 +93,11 @@ Kubernetes: `>= 1.19`
 | aggregator.httpRoute.hostnames | list | `[]` | Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Treat as stable, changing it requires updating every peer and the indexer. |
 | aggregator.httpRoute.labels | object | `{}` | Labels to add to the HTTPRoute. |
 | aggregator.httpRoute.parentRefs | list | `[]` | Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
-| aggregator.image.digest | string | `""` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| aggregator.image.digest | string | `"sha256:1a710e583bddc86d70c390763f795d90c725abd0b97d252481137df9caf51502"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | aggregator.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | aggregator.image.registry | string | `""` | OCI registry, overrides `global.image.registry` when set. |
 | aggregator.image.repository | string | `"w0i8p0z9/chainlink-ccv-aggregator"` | Image repository. |
-| aggregator.image.tag | string | `"v0.3.0"` | Image tag. Mutually exclusive with `digest`. |
+| aggregator.image.tag | string | `""` | Image tag. Mutually exclusive with `digest`. |
 | aggregator.ingress.annotations | object | `{}` | Annotations to add to the Ingress (e.g. controller-specific TLS/HTTP2 or gRPC wiring). |
 | aggregator.ingress.className | string | `""` | Ingress class name. See [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
 | aggregator.ingress.enabled | bool | `false` | Enable an Ingress for the aggregator gRPC endpoint. |
@@ -164,13 +164,13 @@ Kubernetes: `>= 1.19`
 | verifier.bootstrap.config.chains | list | `[]` | List of chains where this node has a signing identity. Each entry registers the node's signing    key for that chain in JD. Empty performs no signing-key sync. |
 | verifier.bootstrap.config.local_app_config_path | string | `"/etc/committee-verifier/config.toml"` | Path to the application config file for local mode. This file holds the application config,    not the bootstrap config. |
 | verifier.bootstrap.config.server.listen_port | int | `9988` | Port for the bootstrap HTTP server. |
-| verifier.config.aggregators | list | `[]` | Aggregators that this verifier writes to.    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set    `address` for any other aggregator. `secret_name` doubles as the credential lookup key for    `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when `verifier.secrets.app.type` is    `externalSecret`). `useInClusterAggregator`, `apiKeyRemoteRef`, and `secretKeyRemoteRef` are    chart-only fields and are not written to `config.toml`. |
-| verifier.config.committee_verifier_addresses | object | `{}` | Addresses of the committee verifiers, one per chain selector. |
+| verifier.config.aggregators | list | `[]` | Aggregators that this verifier writes to.    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set    `address` for any other aggregator. `secret_name` doubles as the credential lookup key for    `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when `verifier.secrets.app.type` is    `externalSecret`). `useInClusterAggregator`, `apiKeyRemoteRef`, and `secretKeyRemoteRef` are    chart-only fields, not written to `config.toml`. `api_key` must be a UUID, `secret_key` must    be hex-encoded, matching the target aggregator's config for this client. |
+| verifier.config.committee_verifier_addresses | object | `{}` | Addresses of the committee verifiers, one per chain selector. Paired with `on_ramp_addresses`:    at least one chain needs both, or the verifier fails to start ("no enabled/initialized chain    sources") — an `evm.config.chains` entry alone isn't enough. |
 | verifier.config.default_executor_on_ramp_addresses | object | `{}` | Addresses of the default executor on-ramps, one per chain selector. Messages naming the default    executor are verified even if they don't name this committee verifier. |
 | verifier.config.disable_finality_checkers | list | `[]` | Chain selectors, as strings, for which to disable the finality violation checker. |
 | verifier.config.message_disablement_rules_client_timeout | string | `"500ms"` | Go duration string for the message-disablement-rules RPC timeout (e.g. `"500ms"`). Empty uses the    integration default. |
 | verifier.config.message_disablement_rules_poll_interval | string | `"2s"` | Go duration string for the message-disablement-rules poll interval (e.g. `"2s"`). Empty uses the    integration default. |
-| verifier.config.on_ramp_addresses | object | `{}` | Addresses of the on-ramps, one per chain selector. |
+| verifier.config.on_ramp_addresses | object | `{}` | Addresses of the on-ramps, one per chain selector. Paired with `committee_verifier_addresses`    above — see that field. |
 | verifier.config.pyroscope_url | string | `""` | Pyroscope server URL for continuous profiling. An empty value disables it. |
 | verifier.config.rmn_remote_addresses | object | `{}` | Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection. |
 | verifier.config.signer_address | string | `""` | On-chain address of this verifier's result-signing key. Set a different value for each verifier. |
@@ -180,15 +180,16 @@ Kubernetes: `>= 1.19`
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
+| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. Empty by default: this is    deployment-specific and has no safe default. |
 | verifier.extraContainers | list | `[]` | Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates). |
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
 | verifier.extraVolumes | list | `[]` | Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
-| verifier.image.digest | string | `""` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| verifier.image.digest | string | `"sha256:e5699c9c957eff9f1bd01a30a67579ede17f96831eefe639327598369bd6572b"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | verifier.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | verifier.image.registry | string | `""` | OCI registry; overrides `global.image.registry` when set. |
 | verifier.image.repository | string | `"w0i8p0z9/chainlink-ccv-verifier"` | Image repository. |
-| verifier.image.tag | string | `"v0.3.0"` | Image tag. Mutually exclusive with `digest`. |
+| verifier.image.tag | string | `""` | Image tag. Mutually exclusive with `digest`. |
 | verifier.labels | object | `{}` | Labels to add to the verifier Deployment object. |
 | verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"bootstrap-info"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |
