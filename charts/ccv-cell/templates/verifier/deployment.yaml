@@ -26,10 +26,12 @@ spec:
         {{- with .Values.verifier.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with .Values.verifier.podAnnotations }}
       annotations:
+        checksum/config: {{ dict "bootstrap" .Values.verifier.bootstrap.config "config" .Values.verifier.config | toJson | sha256sum }}
+        checksum/secrets: {{ .Values.verifier.secrets | toJson | sha256sum }}
+        {{- with .Values.verifier.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "ccv-cell.verifier.serviceAccountName" . }}
       {{- with .Values.global.imagePullSecrets }}

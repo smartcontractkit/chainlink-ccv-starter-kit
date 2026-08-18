@@ -25,10 +25,12 @@ spec:
         {{- with .Values.aggregator.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with .Values.aggregator.podAnnotations }}
       annotations:
+        checksum/config: {{ dict "config" .Values.aggregator.config "ports" .Values.aggregator.ports | toJson | sha256sum }}
+        checksum/secrets: {{ .Values.aggregator.secrets | toJson | sha256sum }}
+        {{- with .Values.aggregator.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "ccv-cell.aggregator.serviceAccountName" . }}
       {{- with .Values.global.imagePullSecrets }}
