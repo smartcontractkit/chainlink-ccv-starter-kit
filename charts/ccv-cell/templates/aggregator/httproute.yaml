@@ -21,6 +21,9 @@ spec:
       {{- if .namespace }}
       namespace: {{ .namespace }}
       {{- end }}
+      {{- if .sectionName }}
+      sectionName: {{ .sectionName }}
+      {{- end }}
     {{- end }}
   {{- with .Values.aggregator.httpRoute.hostnames }}
   hostnames:
