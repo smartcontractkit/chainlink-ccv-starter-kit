@@ -23,3 +23,8 @@ file, found at the chart's root directory.
 Do note the version of helm-docs being used in either the [.pre-commit-config.yaml](.pre-commit-config.yaml) file or
 the [CI workflow](.github/workflows/helm-docs.yml). Small version changes can cause subtle differences in the output
 and fail CI!
+
+## Chart releases
+
+Charts are released via [chart-releaser-action](https://github.com/helm/chart-releaser-action) whenever `charts/**`
+changes on `main`. Bump a chart's `version` in its `Chart.yaml` to trigger a release.
