@@ -1,8 +1,23 @@
 # ccv-cell
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.0.0](https://img.shields.io/badge/Version-0.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 Chainlink CCIP 2.0 CCV Cell deployment, including aggregator and verifier
+
+## Installation
+
+The chart is published as an OCI artifact. Install it with:
+
+```shell
+helm install my-ccv-cell oci://public.ecr.aws/chainlink/helm/ccv-cell --version <version>
+```
+
+Available versions are listed under [Releases](https://github.com/smartcontractkit/chainlink-ccv-starter-kit/releases) and
+as [git tags](https://github.com/smartcontractkit/chainlink-ccv-starter-kit/tags), without the prefix `v`.
+
+Consult the [Values](#values) section bellow, or the [`values.yaml` file](./values.yaml) to see available configuration
+options. Also check the [Requirements](#requirements) section bellow for what you need to configure beforehand.
+You may also read the [runbook](../../RUNBOOK.md) for a small guide.
 
 **Homepage:** <https://github.com/smartcontractkit/chainlink-ccv-starter-kit>
 

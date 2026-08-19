@@ -2,7 +2,7 @@ apiVersion: v2
 name: ccv-cell
 description: Chainlink CCIP 2.0 CCV Cell deployment, including aggregator and verifier
 type: application
-version: 0.1.0
+version: 0.0.0 # ignored, set by CI on release
 kubeVersion: ">= 1.19.0-0"
 keywords:
   - chainlink
