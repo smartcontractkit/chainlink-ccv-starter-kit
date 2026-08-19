@@ -341,6 +341,7 @@ aggregator:
     #   kind: Gateway
     #   name: gateway
     #   namespace: istio-ingress
+    #   sectionName: https
 
     # -- Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-grpcroute).
     #    Treat as stable, changing it requires updating every peer and the indexer.
@@ -366,6 +367,7 @@ aggregator:
     #   kind: Gateway
     #   name: gateway
     #   namespace: istio-ingress
+    #   sectionName: https
 
     # -- Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).
     #    Treat as stable, changing it requires updating every peer and the indexer.
