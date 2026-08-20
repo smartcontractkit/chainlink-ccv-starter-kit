@@ -1,6 +1,11 @@
 # chainlink-ccv-starter-kit
 Starterkit for the Chainlink CCV
 
+## Deploying a CCV Cell
+
+See [RUNBOOK.md](RUNBOOK.md) for the operational guide to deploying the [`ccv-cell`](charts/ccv-cell) chart:
+prerequisites, required values, secrets setup, deploy steps, post-deploy validation, and troubleshooting.
+
 ## Chart docs
 
 Chart docs (`charts/*/README.md`) are generated with [helm-docs](https://github.com/norwoodj/helm-docs) and checked in CI.
