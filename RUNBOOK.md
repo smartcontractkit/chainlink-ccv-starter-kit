@@ -1,13 +1,12 @@
 # CCV Cell Deployment Runbook
 
 Deploy the [`ccv-cell`](charts/ccv-cell) Helm chart for [Chainlink CCV](https://github.com/smartcontractkit/chainlink-ccv).
-This doc is the short path to a working deploy. For the full field-by-field reference, see the
-[chart README](charts/ccv-cell/README.md) (generated from [values.yaml](charts/ccv-cell/values.yaml)).
+Full field reference: the [chart README](charts/ccv-cell/README.md) (generated from [values.yaml](charts/ccv-cell/values.yaml)).
 
-**A CCV Cell is one aggregator plus one verifier (1 pod each).** The verifier watches on-ramps per chain, verifies
-messages, signs results, and sends them to an aggregator (in-cluster or remote). The aggregator collects those
-signed results and checks them against quorum. Multiple independently-run cells form a **committee** (isolation
-requirements for a cell's Postgres/secrets/KMS are in the chart's [Requirements](charts/ccv-cell/README.md#requirements)).
+**A CCV Cell is one aggregator plus one verifier (1 pod each).** The verifier watches on-ramps, verifies messages,
+signs results, and sends them to an aggregator. The aggregator checks signed results against quorum. Multiple
+cells form a **committee**; each cell's Postgres/secrets/KMS isolation requirements are in the chart's
+[Requirements](charts/ccv-cell/README.md#requirements).
 
 ## 1. Prerequisites
 
@@ -18,7 +17,7 @@ requirements for a cell's Postgres/secrets/KMS are in the chart's [Requirements]
   [verifier](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/verifier/committee/config.documented.toml) ·
   [bootstrap](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/bootstrap/config.documented.toml) ·
   [evm](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/evm/config.documented.toml).
-  Field names match the chart's `*.config` keys 1:1. Converting from TOML: don't hand-transcribe, convert it and
+  Field names match the chart's `*.config` keys 1:1. Converting from TOML: convert it (don't hand-transcribe) and
   drop the result under the matching `*.config` key.
 
 ## 2. Wire up secrets
@@ -35,10 +34,9 @@ Set `type` on each of `aggregator.secrets.app`, `verifier.secrets.app`, `verifie
 
 ## 3. Deploy
 
-Want to check your config's actual runtime behavior before touching a real cluster? [`local/`](local) is a
-docker-compose stack wired the same way as this chart, with real Postgres, aggregator, and verifier containers. Its
-[`config/`](local/config) files are also handy as concrete, working examples of each `*.config` section (see the
-table in [local/README.md](local/README.md) mapping each file to its chart equivalent).
+To check runtime behavior before touching a real cluster: [`local/`](local) is a docker-compose stack wired the
+same way as this chart. Its [`config/`](local/config) files double as working examples of each `*.config` section
+(mapped to chart keys in [local/README.md](local/README.md)).
 
 ```bash
 NAMESPACE=your-cell-namespace
@@ -52,12 +50,95 @@ kubectl -n "$NAMESPACE" get pods
 
 ## 4. Verify it worked
 
-| Check | How |
-|---|---|
-| Aggregator up | `GET :8080/health/live` and `:8080/health/ready` |
-| Verifier up | `GET :8100/health` (app) and `:9988/health` (bootstrap) |
-| Secrets synced | `kubectl -n "$NAMESPACE" get externalsecret` should show `SecretSynced` (or `kubectl describe pod` for CSI mount errors) |
-| No crash loop | `kubectl -n "$NAMESPACE" logs sts/my-cell-ccv-cell-verifier -f` (and same for `-aggregator`) |
+A minimal values file that renders and starts cleanly (placeholder addresses, `existingSecret`, one fake chain).
+Swap in real addresses and RPC URLs before trusting it beyond a smoke test:
+
+```yaml
+aggregator:
+  config:
+    clients:
+      - clientId: committee-verifier-1
+        groups: ["default"]
+        enabled: true
+    committee:
+      quorumConfigs:
+        "1":
+          sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
+          threshold: 1
+          signers:
+            - address: "0x00000000000000000000000000000000000000b1"
+      destinationVerifiers:
+        "2": "0x00000000000000000000000000000000000000c2"
+  secrets:
+    app:
+      type: existingSecret
+      existingSecret:
+        name: aggregator-app-secret
+
+verifier:
+  config:
+    verifier_id: "committee-verifier-1"
+    signer_address: "0x00000000000000000000000000000000000000b1"
+    aggregators:
+      - name: aggregator-1
+        secret_name: aggregator_1
+        useInClusterAggregator: true
+    committee_verifier_addresses:
+      "1": "0x00000000000000000000000000000000000000c1"
+    on_ramp_addresses:
+      "1": "0x00000000000000000000000000000000000000a1"
+    rmn_remote_addresses:
+      "1": "0x00000000000000000000000000000000000000b1"
+  evm:
+    config:
+      chains:
+        "1":
+          nodes:
+            - name: node-1
+              http_url: "https://your-rpc-url"
+              order: 1
+  secrets:
+    app:
+      type: existingSecret
+      existingSecret:
+        name: verifier-app-secret
+    bootstrap:
+      type: existingSecret
+      existingSecret:
+        name: verifier-bootstrap-secret
+```
+
+Then check the logs:
+
+```bash
+kubectl -n "$NAMESPACE" logs sts/my-cell-ccv-cell-aggregator
+kubectl -n "$NAMESPACE" logs sts/my-cell-ccv-cell-verifier
+```
+
+Aggregator healthy:
+```
+{"level":"INFO",...,"msg":"Successfully resolved secrets",...}
+{"level":"INFO",...,"msg":"Database connection pool configured",...}
+{"level":"INFO",...,"msg":"gRPC server started :50051"}
+{"level":"INFO",...,"msg":"Service health summary",...,"overall_status":"ready",...}
+```
+
+Verifier healthy:
+```
+{"level":"INFO",...,"msg":"Using signer address","address":"0x..."}
+{"level":"INFO",...,"logger":"EVMCommitteeVerifier.Node.Lifecycle","msg":"RPC Node is online",...,"nodeState":"Alive"}
+{"level":"INFO",...,"msg":"Coordinator started successfully",...}
+{"level":"INFO",...,"msg":"🎯 Verifier service fully started and ready!"}
+{"level":"INFO",...,"msg":"🌐 HTTP server starting","port":"8100"}
+{"level":"INFO",...,"logger":"EVMCommitteeVerifier","msg":"Healthy\n"}
+```
+
+Verifier panics with this instead:
+```
+panic: failed to run EVM committee verifier: failed to start bootstrapper: failed to connect to bootstrapper
+database: dial tcp[::1]:5432: connect: connection refused
+```
+Postgres isn't reachable. Check `secrets.bootstrap`'s DB URL and that Postgres is up.
 
 ## 5. If a pod won't start
 
