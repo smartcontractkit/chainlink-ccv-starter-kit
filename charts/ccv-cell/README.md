@@ -64,10 +64,10 @@ is compromised.
 | aggregator.config.aggregation.maxConsecutiveErrors | int | `0` | Maximum consecutive errors before aggregation is considered failed. 0 disables the check. |
 | aggregator.config.aggregation.operationTimeout | string | `"0s"` | Timeout for each aggregation operation. 0 disables the timeout. |
 | aggregator.config.aggregatorID | string | `""` | Unique identifier for this aggregator instance. An empty value defaults to the pod's hostname,    which is already stable and unique per replica. |
-| aggregator.config.clients | list | `[]` | Authenticated API clients. `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when    `aggregator.secrets.app.type` is `externalSecret`) tell the ExternalSecret where to fetch the    matching API key/secret key for this same `clientId`. Both are chart-only fields, not written    to `config.toml`. `api_key` must be a UUID, `secret_key` must be hex-encoded — the aggregator    rejects other formats at startup. |
-| aggregator.config.committee | object | `{"destinationVerifiers":{},"quorumConfigs":{}}` | Signer quorums and destination verifiers this aggregator trusts. Empty by default:    deployment-specific, no safe default. Hard requirement: the aggregator refuses to start    without at least one entry in both `quorumConfigs` and `destinationVerifiers`. |
-| aggregator.config.committee.destinationVerifiers | object | `{}` | Destination verifier contract address per destination chain selector. |
-| aggregator.config.committee.quorumConfigs | object | `{}` | Quorum config per source chain selector. |
+| aggregator.config.clients | list | `[]` | Authenticated API clients. Both are chart-only fields, not written to `config.toml`.    `api_key` must be a UUID, `secret_key` must be hex-encoded:    the aggregator rejects other formats at startup. |
+| aggregator.config.committee | object | `{"destinationVerifiers":{},"quorumConfigs":{}}` | Signer quorums and destination verifiers this aggregator trusts.    Hard requirement: the aggregator refuses to start without at least one entry in both `quorumConfigs` and `destinationVerifiers`.    without at least one entry in both `quorumConfigs` and `destinationVerifiers`. |
+| aggregator.config.committee.destinationVerifiers | object | `{}` | Destination verifier contract address per destination chain selector.    Note: the map keys must be strings, wrapped in quotes. |
+| aggregator.config.committee.quorumConfigs | object | `{}` | Quorum config per source chain selector. Note: the map keys must be strings, wrapped in quotes. |
 | aggregator.config.generatedConfigPath | string | `""` | Path to a generated config file merged over this one. Rarely needed. |
 | aggregator.config.healthCheck.enabled | bool | `true` | Enable the health-check HTTP server. This chart's liveness/readiness probes require it; do    not disable it unless you replace those probes too. |
 | aggregator.config.healthCheck.port | int | `8080` | Port the health-check HTTP server listens on. |
@@ -151,12 +151,12 @@ is compromised.
 | aggregator.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health/live","port":"health"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | aggregator.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |
 | aggregator.networkPolicy.enabled | bool | `false` | Enable a NetworkPolicy for the aggregator. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
-| aggregator.networkPolicy.ingress | list | `[{"from":[{"podSelector":{}}]}]` | Ingress rules for the NetworkPolicy. When enabled, add a rule allowing traffic from your ingress/gateway controller. Each rule's `ports` defaults to the aggregator's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
+| aggregator.networkPolicy.ingress | list | `[{"from":[{"podSelector":{}}]}]` | Ingress rules for the NetworkPolicy. When enabled, add a rule allowing traffic from your ingress/gateway controller.    Each rule's `ports` defaults to the aggregator's own ports when omitted.    See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
 | aggregator.networkPolicy.labels | object | `{}` | Labels to add to the NetworkPolicy. |
 | aggregator.nodeSelector | object | `{}` | Node selector for pod scheduling. See [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector). |
 | aggregator.podAnnotations | object | `{}` | Annotations to add to the aggregator pods. |
 | aggregator.podLabels | object | `{}` | Labels to add to the aggregator pods. |
-| aggregator.podResources | object | `{}` | CPU/memory resource requests and limits for init/sidecar containers. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
+| aggregator.podResources | object | `{}` | CPU/memory resource requests and limits for the entire pod. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | aggregator.podSecurityContext | object | `{"seccompProfile":{"type":"RuntimeDefault"}}` | Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
 | aggregator.readinessProbe | object | `{"httpGet":{"path":"/health/ready","port":"health"},"initialDelaySeconds":5,"periodSeconds":10}` | Readiness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | aggregator.resources | object | `{}` | CPU/memory resource requests and limits for the aggregator container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
@@ -164,17 +164,18 @@ is compromised.
 | aggregator.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | aggregator.secrets.app.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the app secret. |
 | aggregator.secrets.app.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
-| aggregator.secrets.app.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. |
-| aggregator.secrets.app.externalSecret.storageUrlRemoteRef | object | `{}` | RemoteRef for the storage URL secret. |
+| aggregator.secrets.app.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret.    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef). |
+| aggregator.secrets.app.externalSecret.storageUrlRemoteRef | object | `{}` | RemoteRef for the storage URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
 | aggregator.secrets.app.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `aggregator.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | aggregator.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | aggregator.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | aggregator.secrets.app.labels | object | `{}` | Labels to add to the aggregator app Secret. |
-| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`. |
+| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.    Configure the values below for the chosen type. |
 | aggregator.service.annotations | object | `{}` | Annotations to add to the aggregator Service. |
 | aggregator.service.clusterIP | string | `""` | Static ClusterIP to assign to the Service. Leave empty to let Kubernetes allocate one. |
 | aggregator.service.labels | object | `{}` | Labels to add to the aggregator Service. |
-| aggregator.service.ports | object | `{"grpc":50051,"health":8080}` | Ports exposed by the Service. |
+| aggregator.service.ports.grpc | int | `50051` | Port for the gRPC endpoint. |
+| aggregator.service.ports.health | int | `8080` | Port for the health endpoint. |
 | aggregator.service.type | string | `"ClusterIP"` | Service type. See [Service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
 | aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | aggregator.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the aggregator. |
@@ -184,7 +185,7 @@ is compromised.
 | aggregator.startupProbe | string | `nil` | Startup probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | aggregator.tolerations | list | `[]` | Tolerations for pod scheduling. See [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). |
 | fullnameOverride | string | `""` | Override the fully-qualified resource name. |
-| global.image | object | `{"registry":"public.ecr.aws"}` | Default OCI registry for all images; overridden per-component by setting `image.registry`. |
+| global.image.registry | string | `"public.ecr.aws"` | Default OCI registry for all images; overridden per-component by setting `image.registry`. |
 | global.imagePullSecrets | list | `[]` | Image pull secrets to add to every pod. See [imagePullSecrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod). |
 | global.labels | object | `{}` | Labels added to every resource created by this chart. |
 | nameOverride | string | `""` | Override the chart name used in resource names. |
@@ -204,18 +205,19 @@ is compromised.
 | verifier.bootstrap.config.Monitoring.LogLevel | string | `"info"` | Log level for the service logger. |
 | verifier.bootstrap.config.Monitoring.Pyroscope.Enabled | bool | `false` | Enable Pyroscope telemetry. |
 | verifier.bootstrap.config.Monitoring.Pyroscope.URL | string | `"http://pyroscope:4040"` | Remote endpoint of the Pyroscope service. |
-| verifier.bootstrap.config.chains | list | `[]` | List of chains where this node has a signing identity. Each entry registers the node's signing    key for that chain in JD. Empty performs no signing-key sync. |
-| verifier.bootstrap.config.local_app_config_path | string | `"/etc/committee-verifier/config.toml"` | Path to the application config file for local mode. This file holds the application config,    not the bootstrap config. |
+| verifier.bootstrap.config.chains | list | `[]` | List of chains where this node has a signing identity. |
+| verifier.bootstrap.config.key_import | object | `{}` | Adds an existing Chainlink node key to the keystore instead of generating one. Set only when    migrating an operator off CL mode; requires `expected_id`. |
+| verifier.bootstrap.config.local_app_config_path | string | `"/etc/committee-verifier/config.toml"` | Path to the verifier config file for local mode. This file holds the verifier config,    not the bootstrap config. |
 | verifier.bootstrap.config.server.listen_port | int | `9988` | Port for the bootstrap HTTP server. |
-| verifier.config.aggregators | list | `[]` | Aggregators that this verifier writes to.    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set    `address` for any other aggregator. `secret_name` doubles as the credential lookup key for    `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when `verifier.secrets.app.type` is    `externalSecret`). `useInClusterAggregator`, `apiKeyRemoteRef`, and `secretKeyRemoteRef` are    chart-only fields, not written to `config.toml`. `api_key` must be a UUID, `secret_key` must    be hex-encoded, matching the target aggregator's config for this client. |
-| verifier.config.committee_verifier_addresses | object | `{}` | Addresses of the committee verifiers, one per chain selector. Paired with `on_ramp_addresses`:    at least one chain needs both, or the verifier fails to start ("no enabled/initialized chain    sources") — an `evm.config.chains` entry alone isn't enough. |
-| verifier.config.default_executor_on_ramp_addresses | object | `{}` | Addresses of the default executor on-ramps, one per chain selector. Messages naming the default    executor are verified even if they don't name this committee verifier. |
+| verifier.config.aggregators | list | `[]` | Aggregators that this verifier writes to.    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set    `address` for any other aggregator. `api_key` must be a UUID, `secret_key` must    be hex-encoded, matching the target aggregator's config for this client. |
+| verifier.config.committee_verifier_addresses | object | `{}` | Addresses of the committee verifiers, one per chain selector. Paired with `on_ramp_addresses`:    at least one chain needs both, or the verifier fails to start ("no enabled/initialized chain    sources").    Note: the map keys must be strings, wrapped in quotes. |
+| verifier.config.default_executor_on_ramp_addresses | object | `{}` | Addresses of the default executor on-ramps, one per chain selector. Messages naming the default    executor are verified even if they don't name this committee verifier.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.config.disable_finality_checkers | list | `[]` | Chain selectors, as strings, for which to disable the finality violation checker. |
 | verifier.config.message_disablement_rules_client_timeout | string | `"500ms"` | Go duration string for the message-disablement-rules RPC timeout (e.g. `"500ms"`). Empty uses the    integration default. |
 | verifier.config.message_disablement_rules_poll_interval | string | `"2s"` | Go duration string for the message-disablement-rules poll interval (e.g. `"2s"`). Empty uses the    integration default. |
-| verifier.config.on_ramp_addresses | object | `{}` | Addresses of the on-ramps, one per chain selector. Paired with `committee_verifier_addresses`    above — see that field. |
+| verifier.config.on_ramp_addresses | object | `{}` | Addresses of the on-ramps, one per chain selector. Paired with `committee_verifier_addresses`    above — see that field.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.config.pyroscope_url | string | `""` | Pyroscope server URL for continuous profiling. An empty value disables it. |
-| verifier.config.rmn_remote_addresses | object | `{}` | Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection. |
+| verifier.config.rmn_remote_addresses | object | `{}` | Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.config.signer_address | string | `""` | On-chain address of this verifier's result-signing key. Set a different value for each verifier. |
 | verifier.config.verifier_id | string | `""` | Unique identifier for this committee verifier instance. Set a different value for each verifier    in the committee. |
 | verifier.configMap.annotations | object | `{}` | Annotations to add to the verifier ConfigMap. |
@@ -223,7 +225,7 @@ is compromised.
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
-| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. Empty by default: this is    deployment-specific and has no safe default. |
+| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.extraContainers | list | `[]` | Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates). |
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
@@ -237,33 +239,33 @@ is compromised.
 | verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"bootstrap-info"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |
 | verifier.networkPolicy.enabled | bool | `false` | Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
-| verifier.networkPolicy.ingress | list | `[{"from":[{"podSelector":{}}]}]` | Ingress rules for the NetworkPolicy. Each rule's `ports` defaults to the verifier's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
+| verifier.networkPolicy.ingress | list | `[{"from":[{"podSelector":{}}]}]` | Ingress rules for the NetworkPolicy.    Each rule's `ports` defaults to the verifier's own ports when omitted.    See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
 | verifier.networkPolicy.labels | object | `{}` | Labels to add to the NetworkPolicy. |
 | verifier.nodeSelector | object | `{}` | Node selector for pod scheduling. See [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector). |
 | verifier.podAnnotations | object | `{}` | Annotations to add to the verifier pods. |
 | verifier.podLabels | object | `{}` | Labels to add to the verifier pods. |
-| verifier.podResources | object | `{}` | CPU/memory resource requests and limits for init/sidecar containers. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
+| verifier.podResources | object | `{}` | CPU/memory resource requests and limits for the entire pod. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | verifier.podSecurityContext | object | `{"seccompProfile":{"type":"RuntimeDefault"}}` | Security context applied at the pod level. See [podSecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
 | verifier.readinessProbe | object | `{"httpGet":{"path":"/health","port":"http"},"initialDelaySeconds":5,"periodSeconds":10}` | Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.resources | object | `{}` | CPU/memory resource requests and limits for the verifier container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | verifier.secrets.app.annotations | object | `{}` | Annotations to add to the verifier app Secret. |
 | verifier.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.app.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the app secret. |
-| verifier.secrets.app.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret. |
+| verifier.secrets.app.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
 | verifier.secrets.app.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
-| verifier.secrets.app.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. |
+| verifier.secrets.app.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret.    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef). |
 | verifier.secrets.app.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | verifier.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.app.labels | object | `{}` | Labels to add to the verifier app Secret. |
-| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`. |
+| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.    Configure the values below for the chosen type. |
 | verifier.secrets.bootstrap.annotations | object | `{}` | Annotations to add to the verifier bootstrap Secret. |
 | verifier.secrets.bootstrap.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.bootstrap.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the bootstrap secret. |
-| verifier.secrets.bootstrap.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret. |
-| verifier.secrets.bootstrap.externalSecret.keystorePasswordRemoteRef | object | `{}` | RemoteRef for the keystore password (only when `keystoreBackend` is `postgres`). |
+| verifier.secrets.bootstrap.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
+| verifier.secrets.bootstrap.externalSecret.keystorePasswordRemoteRef | object | `{}` | RemoteRef for the keystore password (only when `keystoreBackend` is `postgres`).    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
 | verifier.secrets.bootstrap.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
-| verifier.secrets.bootstrap.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. |
+| verifier.secrets.bootstrap.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret.    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef). |
 | verifier.secrets.bootstrap.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | verifier.secrets.bootstrap.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
@@ -271,7 +273,7 @@ is compromised.
 | verifier.secrets.bootstrap.kms.ecdsaKeyId | string | `""` | AWS KMS key ID for the ECDSA key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
-| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`. |
+| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.    Configure the values below for the chosen type. |
 | verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |

@@ -1,6 +1,6 @@
 global:
-  # -- Default OCI registry for all images; overridden per-component by setting `image.registry`.
   image:
+    # -- Default OCI registry for all images; overridden per-component by setting `image.registry`.
     registry: public.ecr.aws
   # -- Image pull secrets to add to every pod. See [imagePullSecrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod).
   imagePullSecrets: []
@@ -30,11 +30,8 @@ aggregator:
 
   # This tree is rendered into `config.toml` with `toToml` (see templates/aggregator/configmap.yaml).
   #
-  # server.address is not set here: it's computed from `server.host`/`server.port` below — the
-  # container's own bind port. The Service's exposed port is separate: `aggregator.service.ports.grpc`.
-  #
-  # clients[].apiKeyPair is the legacy env-var-backed credential path, superseded by the secrets file this
-  # chart already provisions (see `clients[].apiKeyRemoteRef`/`secretKeyRemoteRef` below). Not set here.
+  # `server.address` is not set here: it's computed from `server.host` and `server.port` below.
+  # This determines the container's bind address. The Service's exposed port is separate: `aggregator.service.ports.grpc`.
   config:
     # -- Unique identifier for this aggregator instance. An empty value defaults to the pod's hostname,
     #    which is already stable and unique per replica.
@@ -52,11 +49,11 @@ aggregator:
     # -- Maximum verifier-result requests per batch, from 1 to 1000.
     maxCommitVerifierNodeResultRequestsPerBatch: 100
 
-    # -- Signer quorums and destination verifiers this aggregator trusts. Empty by default:
-    #    deployment-specific, no safe default. Hard requirement: the aggregator refuses to start
+    # -- Signer quorums and destination verifiers this aggregator trusts.
+    #    Hard requirement: the aggregator refuses to start without at least one entry in both `quorumConfigs` and `destinationVerifiers`.
     #    without at least one entry in both `quorumConfigs` and `destinationVerifiers`.
     committee:
-      # -- Quorum config per source chain selector.
+      # -- Quorum config per source chain selector. Note: the map keys must be strings, wrapped in quotes.
       quorumConfigs: {}
       # "1":
       #   sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
@@ -65,6 +62,7 @@ aggregator:
       #     - address: "0x00000000000000000000000000000000000000b1"
 
       # -- Destination verifier contract address per destination chain selector.
+      #    Note: the map keys must be strings, wrapped in quotes.
       destinationVerifiers: {}
       # "2": "0x00000000000000000000000000000000000000c2"
 
@@ -107,15 +105,16 @@ aggregator:
       # -- Timeout for a single database query.
       queryTimeout: "10s"
 
-    # -- Authenticated API clients. `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when
-    #    `aggregator.secrets.app.type` is `externalSecret`) tell the ExternalSecret where to fetch the
-    #    matching API key/secret key for this same `clientId`. Both are chart-only fields, not written
-    #    to `config.toml`. `api_key` must be a UUID, `secret_key` must be hex-encoded — the aggregator
-    #    rejects other formats at startup.
+    # -- Authenticated API clients. Both are chart-only fields, not written to `config.toml`.
+    #    `api_key` must be a UUID, `secret_key` must be hex-encoded:
+    #    the aggregator rejects other formats at startup.
     clients: []
     # - clientId: client-1
     #   groups: ["default"]
     #   enabled: true
+    #   # `apiKeyRemoteRef` and `secretKeyRemoteRef` are used only when `aggregator.secrets.app.type` is `externalSecret`.
+    #   # They tell the ExternalSecret where to fetch the matching API key/secret key for this same `clientId`.
+    #   # Omit if `aggregator.secrets.app.type` is not `externalSecret`.
     #   apiKeyRemoteRef:
     #     key: /some/path/for/client-1-api
     #   secretKeyRemoteRef:
@@ -218,6 +217,7 @@ aggregator:
       labels: {}
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.
+      #    Configure the values below for the chosen type.
       type: externalSecret
 
       existingSecret:
@@ -230,11 +230,13 @@ aggregator:
         # -- Name of the ExternalSecret resource to create.
         name: ""
         # -- SecretStore reference for the ExternalSecret.
+        #    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef).
         secretStoreRef:
           name: ""
           kind: ClusterSecretStore
 
         # -- RemoteRef for the storage URL secret.
+        #    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef).
         storageUrlRemoteRef: {}
           # key: /some/path/for/storage-url/
 
@@ -295,9 +297,10 @@ aggregator:
     annotations: {}
     # -- Labels to add to the aggregator Service.
     labels: {}
-    # -- Ports exposed by the Service.
     ports:
+      # -- Port for the gRPC endpoint.
       grpc: 50051
+      # -- Port for the health endpoint.
       health: 8080
 
   ingress:
@@ -384,7 +387,9 @@ aggregator:
     # -- Labels to add to the NetworkPolicy.
     labels: {}
 
-    # -- Ingress rules for the NetworkPolicy. When enabled, add a rule allowing traffic from your ingress/gateway controller. Each rule's `ports` defaults to the aggregator's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+    # -- Ingress rules for the NetworkPolicy. When enabled, add a rule allowing traffic from your ingress/gateway controller.
+    #    Each rule's `ports` defaults to the aggregator's own ports when omitted.
+    #    See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
     ingress:
       - from:
           - podSelector: {}
@@ -398,7 +403,7 @@ aggregator:
     #   cpu: 1
     #   memory: 512Mi
 
-  # -- CPU/memory resource requests and limits for init/sidecar containers. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+  # -- CPU/memory resource requests and limits for the entire pod. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
   podResources: {}
     # limits:
     #   cpu: 2
@@ -478,13 +483,6 @@ verifier:
     pullPolicy: IfNotPresent
 
   # This tree is rendered into `config.toml` with `toToml` (see templates/verifier/configmap.yaml).
-  #
-  # aggregator_address, insecure_aggregator_connection, aggregator_max_send_msg_size_bytes, and
-  # aggregator_max_recv_msg_size_bytes are the legacy single-aggregator fields. Not set here — use
-  # `aggregators` instead.
-  #
-  # monitoring is not set here. The app treats it as deprecated in favor of the bootstrap config (see
-  # `verifier.bootstrap.config.Monitoring`, which this chart already sets).
   config:
     # -- Unique identifier for this committee verifier instance. Set a different value for each verifier
     #    in the committee.
@@ -509,10 +507,7 @@ verifier:
 
     # -- Aggregators that this verifier writes to.
     #    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set
-    #    `address` for any other aggregator. `secret_name` doubles as the credential lookup key for
-    #    `apiKeyRemoteRef`/`secretKeyRemoteRef` (used only when `verifier.secrets.app.type` is
-    #    `externalSecret`). `useInClusterAggregator`, `apiKeyRemoteRef`, and `secretKeyRemoteRef` are
-    #    chart-only fields, not written to `config.toml`. `api_key` must be a UUID, `secret_key` must
+    #    `address` for any other aggregator. `api_key` must be a UUID, `secret_key` must
     #    be hex-encoded, matching the target aggregator's config for this client.
     aggregators: []
     # - name: aggregator-1
@@ -521,6 +516,9 @@ verifier:
     #   insecure_connection: false
     #   max_send_msg_size_bytes: 4194304
     #   max_recv_msg_size_bytes: 4194304
+    #   # `apiKeyRemoteRef` and `secretKeyRemoteRef` are used only when `verifier.secrets.app.type` is `externalSecret`.
+    #   # They tell the ExternalSecret where to fetch the matching API key/secret key for this same `clientId`.
+    #   # Omit if `verifier.secrets.app.type` is not `externalSecret`.
     #   apiKeyRemoteRef:
     #     key: /some/path/for/aggregator-1-api
     #   secretKeyRemoteRef:
@@ -536,28 +534,32 @@ verifier:
 
     # -- Addresses of the committee verifiers, one per chain selector. Paired with `on_ramp_addresses`:
     #    at least one chain needs both, or the verifier fails to start ("no enabled/initialized chain
-    #    sources") — an `evm.config.chains` entry alone isn't enough.
+    #    sources").
+    #    Note: the map keys must be strings, wrapped in quotes.
     committee_verifier_addresses: {}
     # "1": "0x00000000000000000000000000000000000000c1"
 
     # -- Addresses of the default executor on-ramps, one per chain selector. Messages naming the default
     #    executor are verified even if they don't name this committee verifier.
+    #    Note: the map keys must be strings, wrapped in quotes.
     default_executor_on_ramp_addresses: {}
     # "1": "0x00000000000000000000000000000000000000e1"
 
     # -- Addresses of the on-ramps, one per chain selector. Paired with `committee_verifier_addresses`
     #    above — see that field.
+    #    Note: the map keys must be strings, wrapped in quotes.
     on_ramp_addresses: {}
     # "1": "0x00000000000000000000000000000000000000a1"
 
     # -- Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection.
+    #    Note: the map keys must be strings, wrapped in quotes.
     rmn_remote_addresses: {}
     # "1": "0x00000000000000000000000000000000000000b1"
 
   bootstrap:
     # This tree is rendered into `bootstrap-config.toml` with `toToml` (see templates/verifier/configmap.yaml).
     config:
-      # -- Path to the application config file for local mode. This file holds the application config,
+      # -- Path to the verifier config file for local mode. This file holds the verifier config,
       #    not the bootstrap config.
       local_app_config_path: /etc/committee-verifier/config.toml
 
@@ -565,15 +567,14 @@ verifier:
         # -- Port for the bootstrap HTTP server.
         listen_port: 9988
 
-      # -- List of chains where this node has a signing identity. Each entry registers the node's signing
-      #    key for that chain in JD. Empty performs no signing-key sync.
+      # -- List of chains where this node has a signing identity.
       chains: []
       # - type: EVM
       #   id: "1"
 
-      # Adds an existing Chainlink node key to the keystore instead of generating one. Set only when
-      # migrating an operator off CL mode; requires `expected_id`.
-      # key_import:
+      # -- Adds an existing Chainlink node key to the keystore instead of generating one. Set only when
+      #    migrating an operator off CL mode; requires `expected_id`.
+      key_import: {}
       #   path: /etc/ccv/migration/key.json
       #   password_path: /etc/ccv/migration/export-password.txt
       #   expected_id: "0x0123456789abcdef0123456789abcdef01234567"
@@ -616,8 +617,8 @@ verifier:
   evm:
     # This tree is rendered into `evm.toml` with `toToml` (see templates/verifier/configmap.yaml).
     config:
-      # -- RPC and finality settings per EVM chain, keyed by chain selector. Empty by default: this is
-      #    deployment-specific and has no safe default.
+      # -- RPC and finality settings per EVM chain, keyed by chain selector.
+      #    Note: the map keys must be strings, wrapped in quotes.
       chains: {}
       # "1":
       #   #    Number of blocks required before a head is considered final. 0 enables finality-tag
@@ -647,6 +648,7 @@ verifier:
       labels: {}
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.
+      #    Configure the values below for the chosen type.
       type: externalSecret
 
       existingSecret:
@@ -659,9 +661,13 @@ verifier:
         # -- Name of the ExternalSecret resource to create.
         name: ""
         # -- SecretStore reference for the ExternalSecret.
-        secretStoreRef: { name: "", kind: ClusterSecretStore }
+        #    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef).
+        secretStoreRef:
+          name: ""
+          kind: ClusterSecretStore
 
         # -- RemoteRef for the database URL secret.
+        #    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef).
         dbUrlRemoteRef: {}
 
       # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
@@ -690,6 +696,7 @@ verifier:
         ed25519KeyId: ""  # "arn:aws:kms:us-east-1:...:key/def456-..."
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.
+      #    Configure the values below for the chosen type.
       type: externalSecret
 
       existingSecret:
@@ -702,14 +709,17 @@ verifier:
         # -- Name of the ExternalSecret resource to create.
         name: ""
         # -- SecretStore reference for the ExternalSecret.
+        #    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef).
         secretStoreRef:
           name: ""
           kind: ClusterSecretStore
 
         # -- RemoteRef for the database URL secret.
+        #    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef).
         dbUrlRemoteRef: {}
 
         # -- RemoteRef for the keystore password (only when `keystoreBackend` is `postgres`).
+        #    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef).
         keystorePasswordRemoteRef: {}
 
       # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
@@ -767,7 +777,9 @@ verifier:
     annotations: {}
     # -- Labels to add to the NetworkPolicy.
     labels: {}
-    # -- Ingress rules for the NetworkPolicy. Each rule's `ports` defaults to the verifier's own ports when omitted. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+    # -- Ingress rules for the NetworkPolicy.
+    #    Each rule's `ports` defaults to the verifier's own ports when omitted.
+    #    See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
     ingress:
       - from:
           - podSelector: {}
@@ -781,7 +793,7 @@ verifier:
     #   cpu: 1
     #   memory: 512Mi
 
-  # -- CPU/memory resource requests and limits for init/sidecar containers. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+  # -- CPU/memory resource requests and limits for the entire pod. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
   podResources: {}
     # limits:
     #   cpu: 2
