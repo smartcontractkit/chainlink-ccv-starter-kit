@@ -1,0 +1,3 @@
+CREATE DATABASE aggregator;
+CREATE DATABASE verifier;
+CREATE DATABASE bootstrap;

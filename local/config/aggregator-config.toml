@@ -1,0 +1,48 @@
+# See the original at
+# https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/aggregator/config.documented.toml
+
+aggregatorID = "aggregator-1"
+maxCommitVerifierNodeResultRequestsPerBatch = 100
+maxMessageIDsPerBatch = 100
+
+[[clients]]
+  clientId = "committee-verifier-1"
+  enabled = true
+  groups = ["default"]
+
+[committee]
+  [committee.destinationVerifiers]
+    16015286601757825753 = "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
+  [committee.quorumConfigs]
+    [committee.quorumConfigs.16015286601757825753]
+      sourceVerifierAddress = "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
+      threshold = 1
+
+      [[committee.quorumConfigs.16015286601757825753.signers]]
+        address = "0x407ac788a176C3C752cb0052cfc3fEA5Bd7307F2"
+
+[healthCheck]
+  enabled = true
+  port = "8080"
+
+[heartbeat]
+  storeType = "memory"
+
+[messageDisablementRules]
+  refreshInterval = "30s"
+
+[monitoring]
+  LogLevel = "info"
+
+[server]
+  address = ":50051"
+  requestTimeout = "10s"
+
+[storage]
+  type = "postgres"
+  pageSize = 100
+  maxOpenConns = 25
+  maxIdleConns = 5
+  connMaxLifetime = "1h0m0s"
+  connMaxIdleTime = "5m0s"
+  queryTimeout = "10s"

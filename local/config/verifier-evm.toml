@@ -1,0 +1,12 @@
+# See original at
+# https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/evm/config.documented.toml
+
+[chains]
+  [chains.16015286601757825753]
+    finality_depth = 0
+
+    [[chains.16015286601757825753.nodes]]
+      name = "node-1"
+      # Public RPC, heavily rate limited: swap for your own endpoint if you get throttled.
+      http_url = "https://ethereum-sepolia-rpc.publicnode.com"
+      order = 1
