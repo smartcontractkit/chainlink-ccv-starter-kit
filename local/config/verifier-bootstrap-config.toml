@@ -1,0 +1,12 @@
+# See original at
+# https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/bootstrap/config.documented.toml
+
+app_config_mode = "local_app_config"
+local_app_config_path = "/etc/committee-verifier/config.toml"
+chains = []
+
+[server]
+  listen_port = 9988
+
+[Monitoring]
+  LogLevel = "info"

@@ -1,0 +1,64 @@
+name: ccv-cell-local
+
+services:
+  postgres:
+    image: postgres@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b # postgres:15-alpine
+    environment:
+      POSTGRES_USER: ccv
+      POSTGRES_PASSWORD: ccv
+      POSTGRES_DB: ccv
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccv"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  aggregator:
+    image: public.ecr.aws/w0i8p0z9/chainlink-ccv-aggregator@sha256:1a710e583bddc86d70c390763f795d90c725abd0b97d252481137df9caf51502
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AGGREGATOR_CONFIG_PATH: /etc/config.toml
+      AGGREGATOR_SECRETS_PATH: /etc/aggregator/secrets.toml
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    volumes:
+      - ./config/aggregator-config.toml:/etc/config.toml:ro
+      - ./config/aggregator-secrets.toml:/etc/aggregator/secrets.toml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  verifier:
+    image: public.ecr.aws/w0i8p0z9/chainlink-ccv-verifier@sha256:e5699c9c957eff9f1bd01a30a67579ede17f96831eefe639327598369bd6572b
+    depends_on:
+      postgres:
+        condition: service_healthy
+      aggregator:
+        condition: service_healthy
+    environment:
+      BOOTSTRAPPER_CONFIG_PATH: /etc/config.toml
+      BOOTSTRAPPER_SECRETS_PATH: /etc/bootstrap/secrets.toml
+      COMMITTEE_VERIFIER_SECRETS_PATH: /etc/committee-verifier/secrets.toml
+      EVM_CONFIG_PATH: /etc/evm/config.toml
+    ports:
+      - "8100:8100"
+      - "9988:9988"
+    volumes:
+      - ./config/verifier-bootstrap-config.toml:/etc/config.toml:ro
+      - ./config/verifier-config.toml:/etc/committee-verifier/config.toml:ro
+      - ./config/verifier-evm.toml:/etc/evm/config.toml:ro
+      - ./config/verifier-bootstrap-secrets.toml:/etc/bootstrap/secrets.toml:ro
+      - ./config/verifier-app-secrets.toml:/etc/committee-verifier/secrets.toml:ro
+
+volumes:
+  postgres-data:
