@@ -1,0 +1,12 @@
+apiVersion: v2
+name: ccv-cell-mp
+description: GCP Marketplace wrapper around the ccv-cell chart
+type: application
+version: 0.0.0
+# Stamped by build.sh with the deployer tag so the Application descriptor version matches
+# schema.yaml publishedVersion. The literal here is only a placeholder for local `helm template`.
+appVersion: "0.0.0"
+dependencies:
+  - name: ccv-cell
+    version: "*"
+    repository: file://../../../../charts/ccv-cell

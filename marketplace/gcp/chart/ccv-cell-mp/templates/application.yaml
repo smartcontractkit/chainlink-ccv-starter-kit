@@ -1,0 +1,34 @@
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: "{{ .Release.Name }}"
+  annotations:
+    # PLACEHOLDER: partner_id/product_id must match the Marketplace listing IDs. See PLACEHOLDERS.md.
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "chainlink", "product_id": "ccv-cell", "partner_name": "Chainlink"}'
+spec:
+  descriptor:
+    # Must equal schema.yaml publishedVersion. build.sh stamps this chart's appVersion with the tag.
+    type: CCV Cell
+    version: "{{ .Chart.AppVersion }}"
+    description: >-
+      A Chainlink CCV Cell: a committee verifier and its aggregator.
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: "{{ .Release.Name }}"
+  addOwnerRef: true
+  # UI-only inventory: which kinds carrying the selector label belong to this app. No effect on
+  # deploy/health. Keep in sync with what the chart actually renders.
+  componentKinds:
+    - group: v1
+      kind: ConfigMap
+    - group: v1
+      kind: Service
+    - group: apps/v1
+      kind: StatefulSet
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+    - group: secrets-store.csi.x-k8s.io
+      kind: SecretProviderClass

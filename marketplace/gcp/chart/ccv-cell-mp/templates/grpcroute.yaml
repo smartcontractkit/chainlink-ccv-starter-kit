@@ -1,0 +1,25 @@
+{{- $sub := index .Subcharts "ccv-cell" }}
+{{- $agg := $sub.Values.aggregator }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: {{ include "ccv-cell.aggregator.fullname" $sub }}
+  labels:
+    {{- include "ccv-cell.aggregator.labels" $sub | nindent 4 }}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ required "grpcRoute.parentRefName is required" .Values.grpcRoute.parentRefName }}
+      {{- with .Values.grpcRoute.parentRefNamespace }}
+      namespace: {{ . }}
+      {{- end }}
+      {{- with .Values.grpcRoute.parentRefSectionName }}
+      sectionName: {{ . }}
+      {{- end }}
+  hostnames:
+    - {{ required "grpcRoute.hostname is required" .Values.grpcRoute.hostname | quote }}
+  rules:
+    - backendRefs:
+        - name: {{ include "ccv-cell.aggregator.fullname" $sub }}
+          port: {{ $agg.service.ports.grpc }}
