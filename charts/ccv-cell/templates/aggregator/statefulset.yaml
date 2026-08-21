@@ -82,13 +82,7 @@ spec:
               readOnly: true
             - name: secrets
               mountPath: /etc/aggregator/secrets.toml
-              {{- if eq .Values.aggregator.secrets.app.type "externalSecret" }}
-              subPath: secrets.toml
-              {{- else if eq .Values.aggregator.secrets.app.type "gcpSecretStore" }}
-              subPath: secrets.toml
-              {{- else }}
-              subPath: {{ .Values.aggregator.secrets.app.existingSecret.key }}
-              {{- end }}
+              subPath: {{ include "ccv-cell.secretSubPath" (dict "root" . "component" "aggregator" "subComponent" "app") }}
               readOnly: true
             {{- with .Values.aggregator.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -101,16 +95,7 @@ spec:
           configMap:
             name: {{ include "ccv-cell.aggregator.fullname" . }}-config
         - name: secrets
-          {{- if eq .Values.aggregator.secrets.app.type "gcpSecretStore" }}
-          csi:
-            driver: secrets-store-gke.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app") }}
-          {{- else }}
-          secret:
-            secretName: {{ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app") }}
-          {{- end }}
+          {{- include "ccv-cell.secretVolume" (dict "root" . "component" "aggregator" "subComponent" "app") | nindent 10 }}
         {{- with .Values.aggregator.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

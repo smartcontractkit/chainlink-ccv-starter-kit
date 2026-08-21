@@ -85,7 +85,7 @@ app.kubernetes.io/component: aggregator
 {{- end -}}
 
 {{/*
-Name of the K8s Secret (existingSecret/externalSecret) or SecretProviderClass (gcpSecretStore) backing a secret block.
+Name of the K8s Secret (existingSecret/externalSecret) or SecretProviderClass (gcpSecretStore/awsSecretStore) backing a secret block.
 include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app")
 */}}
 {{- define "ccv-cell.secretName" -}}
@@ -99,8 +99,51 @@ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subCompon
     {{- $secret.externalSecret.name | default $default -}}
   {{- else if eq $secret.type "gcpSecretStore" -}}
     {{- $secret.gcpSecretStore.secretProviderClass.name | default $default -}}
+  {{- else if eq $secret.type "awsSecretStore" -}}
+    {{- $secret.awsSecretStore.secretProviderClass.name | default $default -}}
   {{- else -}}
-    {{- fail (printf "invalid secret type %q (must be existingSecret, externalSecret, or gcpSecretStore)" $secret.type) -}}
+    {{- fail (printf "invalid secret type %q (must be existingSecret, externalSecret, gcpSecretStore, or awsSecretStore)" $secret.type) -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Volume definition for a secret block. CSI-backed for gcpSecretStore/awsSecretStore, plain Secret otherwise.
+include "ccv-cell.secretVolume" (dict "root" . "component" "aggregator" "subComponent" "app")
+*/}}
+{{- define "ccv-cell.secretVolume" -}}
+  {{- $componentRoot := index .root.Values .component -}}
+  {{- $secret := index $componentRoot.secrets .subComponent -}}
+  {{- $name := include "ccv-cell.secretName" . -}}
+  {{- if eq $secret.type "gcpSecretStore" }}
+csi:
+  driver: secrets-store-gke.csi.k8s.io
+  readOnly: true
+  volumeAttributes:
+    secretProviderClass: {{ $name }}
+  {{- else if eq $secret.type "awsSecretStore" }}
+csi:
+  driver: secrets-store.csi.k8s.io
+  readOnly: true
+  volumeAttributes:
+    secretProviderClass: {{ $name }}
+  {{- else }}
+secret:
+  secretName: {{ $name }}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+subPath to use when mounting a secret file. CSI-backed types always write "secrets.toml";
+existingSecret uses the configured key.
+include "ccv-cell.secretSubPath" (dict "root" . "component" "aggregator" "subComponent" "app")
+*/}}
+{{- define "ccv-cell.secretSubPath" -}}
+  {{- $componentRoot := index .root.Values .component -}}
+  {{- $secret := index $componentRoot.secrets .subComponent -}}
+  {{- if eq $secret.type "existingSecret" -}}
+    {{- $secret.existingSecret.key -}}
+  {{- else -}}
+    secrets.toml
   {{- end -}}
 {{- end -}}
 

@@ -32,8 +32,10 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
   - We further recommend that the `bootstrap` and `verifier` databases are placed on one cluster, and the `aggregator`
     database be placed on another. This implementation detail may vary depending on your infrastructure.
 - A secrets manager:
-  - The chart currently has first class support for [External Secrets Operator](https://external-secrets.io/) and [GCP's
-    Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+  - The chart has first class support for [External Secrets Operator](https://external-secrets.io/),
+    [GCP's Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component),
+    and [AWS Secrets Manager](https://github.com/aws/secrets-store-csi-driver-provider-aws) (via the ASCP,
+    with IRSA or EKS Pod Identity).
   - If you use some other secrets manager, you should instead use the "existing secret" mechanism and manage the secret
     yourself.
   - Never directly provide credentials through the chart's values. Values should be versioned in your VCS, and are no
