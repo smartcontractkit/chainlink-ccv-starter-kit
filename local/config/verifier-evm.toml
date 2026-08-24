@@ -1,5 +1,15 @@
 # See original at
 # https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/evm/config.documented.toml
+#
+# The public Sepolia node below is fine to just boot the stack, but it is UNRELIABLE for a real
+# attestation run: under the verifier's concurrent load (source reader + finality checker) it stalls
+# ("Failed to get latest block") and the message is never discovered. This is a latency/reliability
+# problem, not rate-limiting.
+#
+# For a real send, use a reliable endpoint:
+#   - Local / quick test (this compose): one reliable node is enough — replace the http_url below with
+#     your own reliable/paid Sepolia RPC (Alchemy / Infura / self-hosted).
+#   - Production (Helm chart): configure several reliable nodes with `order` for failover.
 
 [chains]
   [chains.16015286601757825753]
@@ -7,6 +17,7 @@
 
     [[chains.16015286601757825753.nodes]]
       name = "node-1"
-      # Public RPC, heavily rate limited: swap for your own endpoint if you get throttled.
+      # OK to boot the stack; NOT reliable for a real attestation run. Replace with your own reliable
+      # Sepolia endpoint before sending a real message.
       http_url = "https://ethereum-sepolia-rpc.publicnode.com"
       order = 1
