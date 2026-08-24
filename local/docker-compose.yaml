@@ -1,4 +1,4 @@
-name: ccv-cell-local
+name: ${COMPOSE_PROJECT_NAME:-ccv-cell-local}
 
 services:
   postgres:
@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ccv
       POSTGRES_DB: ccv
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - postgres-data:/var/lib/postgresql/data
@@ -27,8 +27,8 @@ services:
       AGGREGATOR_CONFIG_PATH: /etc/config.toml
       AGGREGATOR_SECRETS_PATH: /etc/aggregator/secrets.toml
     ports:
-      - "50051:50051"
-      - "8080:8080"
+      - "${AGG_GRPC_PORT:-50051}:50051"
+      - "${AGG_HEALTH_PORT:-8080}:8080"
     volumes:
       - ./config/aggregator-config.toml:/etc/config.toml:ro
       - ./config/aggregator-secrets.toml:/etc/aggregator/secrets.toml:ro
@@ -40,6 +40,9 @@ services:
 
   verifier:
     image: public.ecr.aws/w0i8p0z9/chainlink-ccv-verifier@sha256:e5699c9c957eff9f1bd01a30a67579ede17f96831eefe639327598369bd6572b
+    # Restart on a cold-boot DB race: on the first boot the verifier can panic while writing its
+    # keystore before Postgres is fully ready. on-failure lets it recover on the next attempt.
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,14 +54,22 @@ services:
       COMMITTEE_VERIFIER_SECRETS_PATH: /etc/committee-verifier/secrets.toml
       EVM_CONFIG_PATH: /etc/evm/config.toml
     ports:
-      - "8100:8100"
-      - "9988:9988"
+      - "${VERIFIER_APP_PORT:-8100}:8100"
+      - "${VERIFIER_BOOTSTRAP_PORT:-9988}:9988"
     volumes:
       - ./config/verifier-bootstrap-config.toml:/etc/config.toml:ro
       - ./config/verifier-config.toml:/etc/committee-verifier/config.toml:ro
       - ./config/verifier-evm.toml:/etc/evm/config.toml:ro
       - ./config/verifier-bootstrap-secrets.toml:/etc/bootstrap/secrets.toml:ro
       - ./config/verifier-app-secrets.toml:/etc/committee-verifier/secrets.toml:ro
+    # Health probe so `docker compose up --wait` doesn't report a dead/booting verifier as ready.
+    # GET /health on :8100 returns 200 only once the verifier is fully up.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8100/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 40s
 
 volumes:
   postgres-data:
