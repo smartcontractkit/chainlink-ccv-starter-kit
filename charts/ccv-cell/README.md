@@ -137,7 +137,7 @@ is compromised.
 | aggregator.httpRoute.hostnames | list | `[]` | Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Treat as stable, changing it requires updating every peer and the indexer. |
 | aggregator.httpRoute.labels | object | `{}` | Labels to add to the HTTPRoute. |
 | aggregator.httpRoute.parentRefs | list | `[]` | Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
-| aggregator.image.digest | string | `"sha256:1a710e583bddc86d70c390763f795d90c725abd0b97d252481137df9caf51502"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| aggregator.image.digest | string | `"sha256:5f46057c7e61db5df5202a953599d4dd3c587f796e9feabe02fc6a62051d4a24"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | aggregator.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | aggregator.image.registry | string | `""` | OCI registry, overrides `global.image.registry` when set. |
 | aggregator.image.repository | string | `"w0i8p0z9/chainlink-ccv-aggregator"` | Image repository. |
@@ -236,7 +236,7 @@ is compromised.
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
 | verifier.extraVolumes | list | `[]` | Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
-| verifier.image.digest | string | `"sha256:e5699c9c957eff9f1bd01a30a67579ede17f96831eefe639327598369bd6572b"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| verifier.image.digest | string | `"sha256:7115f9d35509bbf2587105d5cce9206a28a99355db7f92807169e5e96158ce89"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | verifier.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | verifier.image.registry | string | `""` | OCI registry; overrides `global.image.registry` when set. |
 | verifier.image.repository | string | `"w0i8p0z9/chainlink-ccv-verifier"` | Image repository. |

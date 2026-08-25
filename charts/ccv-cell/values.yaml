@@ -24,7 +24,7 @@ aggregator:
     # -- Image tag. Mutually exclusive with `digest`.
     tag: ""
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: "sha256:1a710e583bddc86d70c390763f795d90c725abd0b97d252481137df9caf51502"
+    digest: "sha256:5f46057c7e61db5df5202a953599d4dd3c587f796e9feabe02fc6a62051d4a24"
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
@@ -497,7 +497,7 @@ verifier:
     # -- Image tag. Mutually exclusive with `digest`.
     tag: ""
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: "sha256:e5699c9c957eff9f1bd01a30a67579ede17f96831eefe639327598369bd6572b"
+    digest: "sha256:7115f9d35509bbf2587105d5cce9206a28a99355db7f92807169e5e96158ce89"
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
