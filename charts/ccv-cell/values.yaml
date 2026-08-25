@@ -591,9 +591,9 @@ verifier:
       # - type: EVM
       #   id: "1"
 
-      # -- Adds an existing Chainlink node key to the keystore instead of generating one. Set only when
-      #    migrating an operator off CL mode; requires `expected_id`.
-      key_import: {}
+      # Adds an existing Chainlink node key to the keystore instead of generating one. Set only when
+      # migrating an operator off CL mode; requires `expected_id`.
+      # key_import:
       #   path: /etc/ccv/migration/key.json
       #   password_path: /etc/ccv/migration/export-password.txt
       #   expected_id: "0x0123456789abcdef0123456789abcdef01234567"
