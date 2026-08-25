@@ -33,8 +33,10 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
   - We further recommend that the `bootstrap` and `verifier` databases are placed on one cluster, and the `aggregator`
     database be placed on another. This implementation detail may vary depending on your infrastructure.
 - A secrets manager:
-  - The chart currently has first class support for [External Secrets Operator](https://external-secrets.io/) and [GCP's
-    Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+  - The chart has first class support for [External Secrets Operator](https://external-secrets.io/),
+    [GCP's Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component),
+    and [AWS Secrets Manager](https://github.com/aws/secrets-store-csi-driver-provider-aws) (via the ASCP,
+    with IRSA or EKS Pod Identity).
   - If you use some other secrets manager, you should instead use the "existing secret" mechanism and manage the secret
     yourself.
   - Never directly provide credentials through the chart's values. Values should be versioned in your VCS, and are no
@@ -161,6 +163,11 @@ is compromised.
 | aggregator.readinessProbe | object | `{"httpGet":{"path":"/health/ready","port":"health"},"initialDelaySeconds":5,"periodSeconds":10}` | Readiness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | aggregator.resources | object | `{}` | CPU/memory resource requests and limits for the aggregator container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | aggregator.secrets.app.annotations | object | `{}` | Annotations to add to the aggregator app Secret. |
+| aggregator.secrets.app.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `aggregator.serviceAccount`.    For IRSA: annotate the ServiceAccount with `eks.amazonaws.com/role-arn`.    For EKS Pod Identity: create a Pod Identity association via the EKS console/CLI; set `usePodIdentity: true`. |
+| aggregator.secrets.app.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |
+| aggregator.secrets.app.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
+| aggregator.secrets.app.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| aggregator.secrets.app.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
 | aggregator.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | aggregator.secrets.app.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the app secret. |
 | aggregator.secrets.app.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
@@ -170,14 +177,14 @@ is compromised.
 | aggregator.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | aggregator.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | aggregator.secrets.app.labels | object | `{}` | Labels to add to the aggregator app Secret. |
-| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.    Configure the values below for the chosen type. |
+| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
 | aggregator.service.annotations | object | `{}` | Annotations to add to the aggregator Service. |
 | aggregator.service.clusterIP | string | `""` | Static ClusterIP to assign to the Service. Leave empty to let Kubernetes allocate one. |
 | aggregator.service.labels | object | `{}` | Labels to add to the aggregator Service. |
 | aggregator.service.ports.grpc | int | `50051` | Port for the gRPC endpoint. |
 | aggregator.service.ports.health | int | `8080` | Port for the health endpoint. |
 | aggregator.service.type | string | `"ClusterIP"` | Service type. See [Service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
-| aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
+| aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `aggregator.secrets.app.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secret. |
 | aggregator.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the aggregator. |
 | aggregator.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | aggregator.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |
@@ -249,6 +256,11 @@ is compromised.
 | verifier.readinessProbe | object | `{"httpGet":{"path":"/health","port":"http"},"initialDelaySeconds":5,"periodSeconds":10}` | Readiness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.resources | object | `{}` | CPU/memory resource requests and limits for the verifier container. See [resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). |
 | verifier.secrets.app.annotations | object | `{}` | Annotations to add to the verifier app Secret. |
+| verifier.secrets.app.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`.    For IRSA: annotate the ServiceAccount with `eks.amazonaws.com/role-arn`.    For EKS Pod Identity: create a Pod Identity association via the EKS console/CLI; set `usePodIdentity: true`. |
+| verifier.secrets.app.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |
+| verifier.secrets.app.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
+| verifier.secrets.app.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.app.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
 | verifier.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.app.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the app secret. |
 | verifier.secrets.app.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
@@ -258,8 +270,13 @@ is compromised.
 | verifier.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.app.labels | object | `{}` | Labels to add to the verifier app Secret. |
-| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.    Configure the values below for the chosen type. |
+| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
 | verifier.secrets.bootstrap.annotations | object | `{}` | Annotations to add to the verifier bootstrap Secret. |
+| verifier.secrets.bootstrap.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`.    For IRSA: annotate the ServiceAccount with `eks.amazonaws.com/role-arn`.    For EKS Pod Identity: create a Pod Identity association via the EKS console/CLI; set `usePodIdentity: true`. |
+| verifier.secrets.bootstrap.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |
+| verifier.secrets.bootstrap.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
+| verifier.secrets.bootstrap.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.bootstrap.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
 | verifier.secrets.bootstrap.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.bootstrap.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the bootstrap secret. |
 | verifier.secrets.bootstrap.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
@@ -273,8 +290,8 @@ is compromised.
 | verifier.secrets.bootstrap.kms.ecdsaKeyId | string | `""` | AWS KMS key ID for the ECDSA key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
-| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, or `gcpSecretStore`.    Configure the values below for the chosen type. |
-| verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount. For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA. See    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
+| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
+| verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets. |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | verifier.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |

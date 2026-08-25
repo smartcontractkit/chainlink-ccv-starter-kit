@@ -28,6 +28,10 @@ Set `type` on each of `aggregator.secrets.app`, `verifier.secrets.app`, `verifie
   `*RemoteRef` fields (e.g. `storageUrlRemoteRef`, per-client `apiKeyRemoteRef`/`secretKeyRemoteRef`).
 - **`gcpSecretStore`**: chart creates a `SecretProviderClass` pointing at one `secretVersionResourceName` holding a
   full pre-built `secrets.toml`. Requires Workload Identity on `*.serviceAccount.annotations`.
+- **`awsSecretStore`**: chart creates a `SecretProviderClass` using the [AWS ASCP](https://github.com/aws/secrets-store-csi-driver-provider-aws)
+  pointing at one `secretName` (name or ARN) in AWS Secrets Manager holding a full pre-built `secrets.toml`.
+  Supports both IRSA (annotate the ServiceAccount with `eks.amazonaws.com/role-arn`) and EKS Pod Identity
+  (set `awsSecretStore.usePodIdentity: true` and create a Pod Identity association via EKS).
 - **`existingSecret`**: you manage the `Secret` yourself, the chart just mounts it.
 
 `api_key` must be a UUID, `secret_key` must be hex-encoded.
@@ -148,6 +152,7 @@ Postgres isn't reachable. Check `secrets.bootstrap`'s DB URL and that Postgres i
 | Verifier crash-loops: `no enabled/initialized chain sources` | `committee_verifier_addresses`/`on_ramp_addresses` aren't both set for the same chain, or `evm.config.chains` is missing that chain. |
 | `helm install` fails: `... but no apiKeyRemoteRef` | A `clients[]`/`aggregators[]` entry is missing its remote-ref while using `externalSecret`. |
 | CSI mount errors (`gcpSecretStore`) | GKE Secret Manager add-on not enabled, or Workload Identity not wired on the ServiceAccount. |
+| CSI mount errors (`awsSecretStore`) | ASCP not installed, IAM role missing `secretsmanager:GetSecretValue`/`DescribeSecret`, or IRSA/Pod Identity not wired on the ServiceAccount. |
 | Verifier logs show RPC timeouts/429s | Public RPC endpoints throttle aggressively under sustained polling (the local docker-compose stack hits this too, with its default public Sepolia RPC). Add fallback nodes per chain in `evm.config.chains[].nodes` (each with an `order`), or switch to a dedicated/paid provider. |
 
 ## 6. Upgrades, rollback, scaling
