@@ -213,7 +213,6 @@ is compromised.
 | verifier.bootstrap.config.Monitoring.Pyroscope.Enabled | bool | `false` | Enable Pyroscope telemetry. |
 | verifier.bootstrap.config.Monitoring.Pyroscope.URL | string | `"http://pyroscope:4040"` | Remote endpoint of the Pyroscope service. |
 | verifier.bootstrap.config.chains | list | `[]` | List of chains where this node has a signing identity. |
-| verifier.bootstrap.config.key_import | object | `{}` | Adds an existing Chainlink node key to the keystore instead of generating one. Set only when    migrating an operator off CL mode; requires `expected_id`. |
 | verifier.bootstrap.config.local_app_config_path | string | `"/etc/committee-verifier/config.toml"` | Path to the verifier config file for local mode. This file holds the verifier config,    not the bootstrap config. |
 | verifier.bootstrap.config.server.listen_port | int | `9988` | Port for the bootstrap HTTP server. |
 | verifier.config.aggregators | list | `[]` | Aggregators that this verifier writes to.    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set    `address` for any other aggregator. `api_key` must be a UUID, `secret_key` must    be hex-encoded, matching the target aggregator's config for this client. |
