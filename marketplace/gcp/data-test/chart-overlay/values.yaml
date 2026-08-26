@@ -58,8 +58,6 @@ ccv-cell:
         - name: aggregator-1
           secret_name: aggregator_1
           useInClusterAggregator: true
-      # A chain source needs both committee_verifier_addresses and on_ramp_addresses, or the verifier
-      # has nothing to coordinate. Sepolia selector, addresses from the old values.gcp.yaml.
       committee_verifier_addresses:
         "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
       on_ramp_addresses:

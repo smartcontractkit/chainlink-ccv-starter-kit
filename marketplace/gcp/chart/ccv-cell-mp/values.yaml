@@ -1,6 +1,3 @@
-# The aggregator gRPC endpoint is exposed through a Gateway API GRPCRoute rendered by this wrapper
-# (templates/grpcroute.yaml), not by the subchart. The form supplies only the knobs a user must
-# choose; everything else assumes a standard Gateway.
 grpcRoute:
   enabled: true
   hostname: ""
@@ -8,16 +5,12 @@ grpcRoute:
   parentRefNamespace: ""
   parentRefSectionName: ""
 
-# Overrides for the ccv-cell subchart: only what Marketplace forces on us.
-#
-# Image values are absent on purpose. For schema v2 the deployer computes them at deploy time from
-# its own image location and passes them in, overriding whatever the subchart defaults to.
 ccv-cell:
   aggregator:
     image:
       # Marketplace parameterizes repository/tag, and the chart rejects tag and digest together.
       digest: ""
-    # Marketplace forbids charts from creating service accounts; it creates them and passes the name.
+    # Marketplace forbids charts from creating service accounts, it creates them and passes the name.
     serviceAccount:
       create: false
     secrets:
@@ -34,6 +27,4 @@ ccv-cell:
         type: gcpSecretStore
       bootstrap:
         type: gcpSecretStore
-        # Not a form option: KMS is the only production-supported keystore. The verify overlay
-        # switches this to postgres, which has no cloud dependency.
         keystoreBackend: kms

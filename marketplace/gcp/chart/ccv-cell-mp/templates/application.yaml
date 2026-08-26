@@ -6,11 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/name: "{{ .Release.Name }}"
   annotations:
-    # PLACEHOLDER: partner_id/product_id must match the Marketplace listing IDs. See PLACEHOLDERS.md.
+    # PLACEHOLDER: partner_id/product_id must match the Marketplace listing IDs.
     marketplace.cloud.google.com/deploy-info: '{"partner_id": "chainlink", "product_id": "ccv-cell", "partner_name": "Chainlink"}'
 spec:
   descriptor:
-    # Must equal schema.yaml publishedVersion. build.sh stamps this chart's appVersion with the tag.
     type: CCV Cell
     version: "{{ .Chart.AppVersion }}"
     description: >-
@@ -19,8 +18,6 @@ spec:
     matchLabels:
       app.kubernetes.io/name: "{{ .Release.Name }}"
   addOwnerRef: true
-  # UI-only inventory: which kinds carrying the selector label belong to this app. No effect on
-  # deploy/health. Keep in sync with what the chart actually renders.
   componentKinds:
     - group: v1
       kind: ConfigMap
