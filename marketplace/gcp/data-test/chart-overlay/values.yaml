@@ -19,13 +19,13 @@ ccv-cell:
     config:
       committee:
         quorumConfigs:
-          "1":
-            sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
+          "16015286601757825753":
+            sourceVerifierAddress: "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
             threshold: 1
             signers:
-              - address: "0x00000000000000000000000000000000000000b1"
+              - address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
         destinationVerifiers:
-          "2": "0x00000000000000000000000000000000000000c2"
+          "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
       clients:
         - clientId: committee-verifier-1
           groups: [default]
@@ -38,6 +38,20 @@ ccv-cell:
           key: secrets.toml
 
   verifier:
+    bootstrap:
+      config:
+        key_import:
+          path: /etc/ccv/migration/key.json
+          password_path: /etc/ccv/migration/export-password.txt
+          expected_id: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+    extraVolumes:
+      - name: key-import
+        secret:
+          secretName: verify-verifier-key-import
+    extraVolumeMounts:
+      - name: key-import
+        mountPath: /etc/ccv/migration
+        readOnly: true
     extraInitContainers:
       - name: wait-for-postgres
         image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685 # postgres:16-alpine
@@ -54,11 +68,19 @@ ccv-cell:
             done
     config:
       verifier_id: "committee-verifier-1"
-      signer_address: "0x0000000000000000000000000000000000000001"
+      signer_address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
       aggregators:
         - name: aggregator-1
           secret_name: aggregator_1
           useInClusterAggregator: true
+      # A chain source needs both committee_verifier_addresses and on_ramp_addresses, or the verifier
+      # has nothing to coordinate. Sepolia selector, addresses from the old values.gcp.yaml.
+      committee_verifier_addresses:
+        "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
+      on_ramp_addresses:
+        "16015286601757825753": "0xA94E45744553F4B2bea9DfB8979a02962B980732"
+      rmn_remote_addresses:
+        "16015286601757825753": "0xACD1e9A75cA486c6883BC5835a022536fA67fCbF"
     evm:
       config:
         chains:
@@ -66,7 +88,7 @@ ccv-cell:
             finality_depth: 0
             nodes:
               - name: node-1
-                http_url: "http://rpc.invalid"
+                http_url: "https://ethereum-sepolia-rpc.publicnode.com"
                 order: 1
     secrets:
       app:
