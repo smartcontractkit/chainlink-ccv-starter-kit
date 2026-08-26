@@ -1,21 +1,20 @@
 grpcRoute:
   enabled: false
 
+verify:
+  postgres:
+    image:
+      registry: docker.io
+      repository: library/postgres
+      tag: 16-alpine
+  curl:
+    image:
+      registry: docker.io
+      repository: curlimages/curl
+      tag: 8.21.0
+
 ccv-cell:
   aggregator:
-    extraInitContainers:
-      - name: wait-for-postgres
-        image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685 # postgres:16-alpine
-        env:
-          - name: PGPASSWORD
-            value: ccv
-        command:
-          - sh
-          - -c
-          - |
-            until timeout 2 psql -h verify-postgres -U ccv -d aggregator -c 'SELECT 1' >/dev/null 2>&1; do
-              echo "waiting for postgres databases"; sleep 2;
-            done
     config:
       committee:
         quorumConfigs:
@@ -52,20 +51,6 @@ ccv-cell:
       - name: key-import
         mountPath: /etc/ccv/migration
         readOnly: true
-    extraInitContainers:
-      - name: wait-for-postgres
-        image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685 # postgres:16-alpine
-        env:
-          - name: PGPASSWORD
-            value: ccv
-        command:
-          - sh
-          - -c
-          - |
-            until timeout 2 psql -h verify-postgres -U ccv -d verifier -c 'SELECT 1' >/dev/null 2>&1 \
-              && timeout 2 psql -h verify-postgres -U ccv -d bootstrap -c 'SELECT 1' >/dev/null 2>&1; do
-              echo "waiting for postgres databases"; sleep 2;
-            done
     config:
       verifier_id: "committee-verifier-1"
       signer_address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
