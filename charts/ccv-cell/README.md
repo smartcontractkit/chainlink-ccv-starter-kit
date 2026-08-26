@@ -231,7 +231,7 @@ is compromised.
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
-| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector.    Note: the map keys must be strings, wrapped in quotes. |
+| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. `nodes[].httpUrlRemoteRef`/    `wsUrlRemoteRef` (used only when `verifier.secrets.evm.type` is `externalSecret`) tell the    ExternalSecret where to fetch that node's RPC URL(s) from.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.extraContainers | list | `[]` | Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates). |
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
@@ -290,6 +290,21 @@ is compromised.
 | verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
 | verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
+| verifier.secrets.evm.annotations | object | `{}` | Annotations to add to the verifier evm Secret. |
+| verifier.secrets.evm.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`. |
+| verifier.secrets.evm.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |
+| verifier.secrets.evm.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
+| verifier.secrets.evm.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.evm.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| verifier.secrets.evm.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
+| verifier.secrets.evm.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the evm secret. |
+| verifier.secrets.evm.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
+| verifier.secrets.evm.externalSecret.secretStoreRef | object | `{"kind":"ClusterSecretStore","name":""}` | SecretStore reference for the ExternalSecret. The actual per-URL RemoteRefs live on each    `verifier.evm.config.chains[].nodes[]` entry instead, as `httpUrlRemoteRef`/`wsUrlRemoteRef`.    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef). |
+| verifier.secrets.evm.gcpSecretStore | object | `{"secretProviderClass":{"name":""},"secretVersionResourceName":""}` | GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity). |
+| verifier.secrets.evm.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.evm.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name holding a pre-built    `secrets.toml`, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
+| verifier.secrets.evm.labels | object | `{}` | Labels to add to the verifier evm Secret. |
+| verifier.secrets.evm.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
 | verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets. |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |

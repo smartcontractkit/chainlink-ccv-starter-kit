@@ -634,9 +634,15 @@ verifier:
           # env: production
 
   evm:
-    # This tree is rendered into `evm.toml` with `toToml` (see templates/verifier/configmap.yaml).
+    # Non-secret scaffold for the verifier's EVM config: chain selectors, finality_depth,
+    # txm_block_time, node name/order. RPC URLs come from httpUrlRemoteRef/wsUrlRemoteRef instead.
+    # verifier.secrets.evm below decides how the file is produced: externalSecret (the default)
+    # merges this tree with the fetched URLs; existingSecret/gcpSecretStore/awsSecretStore ignore it
+    # and mount a pre-built file instead, since RPC URLs commonly embed a provider API key.
     config:
-      # -- RPC and finality settings per EVM chain, keyed by chain selector.
+      # -- RPC and finality settings per EVM chain, keyed by chain selector. `nodes[].httpUrlRemoteRef`/
+      #    `wsUrlRemoteRef` (used only when `verifier.secrets.evm.type` is `externalSecret`) tell the
+      #    ExternalSecret where to fetch that node's RPC URL(s) from.
       #    Note: the map keys must be strings, wrapped in quotes.
       chains: {}
       # "1":
@@ -647,11 +653,12 @@ verifier:
       #   #    time. 0 uses the standalone default; non-zero values must be at least 2 seconds.
       #   txm_block_time: "2s"
       #   # RPC endpoints used to reach this chain.
-      #   nodes:
       #     - name: node-1
-      #       http_url: "http://rpc-url.com"
-      #       ws_url: "ws://rpc-url.com"
       #       order: 1
+      #       httpUrlRemoteRef:
+      #         key: /some/path/for/chain-1-node-1-http-url
+      #       # wsUrlRemoteRef:
+      #       #   key: /some/path/for/chain-1-node-1-ws-url
 
   configMap:
     # -- Annotations to add to the verifier ConfigMap.
@@ -773,6 +780,58 @@ verifier:
       #    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`.
       #    For IRSA: annotate the ServiceAccount with `eks.amazonaws.com/role-arn`.
       #    For EKS Pod Identity: create a Pod Identity association via the EKS console/CLI; set `usePodIdentity: true`.
+      awsSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`.
+        secretName: ""
+        # -- AWS region where the secret lives. If omitted, the ASCP infers it from the node's
+        #    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters).
+        region: ""
+        # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
+        usePodIdentity: false
+
+    evm:
+      # -- Annotations to add to the verifier evm Secret.
+      annotations: {}
+      # -- Labels to add to the verifier evm Secret.
+      labels: {}
+
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.
+      #    Configure the values below for the chosen type.
+      type: externalSecret
+
+      existingSecret:
+        # -- Name of an existing Kubernetes Secret to use as the evm secret.
+        name: ""
+        # -- Key inside the existing Secret that holds the secrets file.
+        key: "secrets.toml"
+
+      externalSecret:
+        # -- Name of the ExternalSecret resource to create.
+        name: ""
+        # -- SecretStore reference for the ExternalSecret. The actual per-URL RemoteRefs live on each
+        #    `verifier.evm.config.chains[].nodes[]` entry instead, as `httpUrlRemoteRef`/`wsUrlRemoteRef`.
+        #    See [SecretStoreRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.SecretStoreRef).
+        secretStoreRef:
+          name: ""
+          kind: ClusterSecretStore
+
+      # -- GCP Secret Manager, mounted via the [Secret Manager add-on for the Secrets Store CSI Driver](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component).
+      #    Requires the add-on enabled on the GKE cluster and Workload Identity Federation configured for `verifier.serviceAccount` as described in
+      #    [Configure Workload Identity](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component#configure-workload-identity).
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name holding a pre-built
+        #    `secrets.toml`, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
+      # -- AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)
+      #    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either
+      #    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`.
       awsSecretStore:
         secretProviderClass:
           # -- Name of the SecretProviderClass resource to create.

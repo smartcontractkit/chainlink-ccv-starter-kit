@@ -27,7 +27,7 @@ spec:
         {{- end }}
       annotations:
         checksum/config: {{ dict "bootstrap" .Values.verifier.bootstrap.config "config" .Values.verifier.config | toJson | sha256sum }}
-        checksum/secrets: {{ .Values.verifier.secrets | toJson | sha256sum }}
+        checksum/secrets: {{ dict "secrets" .Values.verifier.secrets "evm" .Values.verifier.evm.config | toJson | sha256sum }}
         {{- with .Values.verifier.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -89,9 +89,9 @@ spec:
               mountPath: {{ .Values.verifier.bootstrap.config.local_app_config_path }}
               subPath: config.toml
               readOnly: true
-            - name: config
+            - name: evm-secret
               mountPath: /etc/evm/config.toml
-              subPath: evm.toml
+              subPath: {{ include "ccv-cell.secretSubPath" (dict "root" . "component" "verifier" "subComponent" "evm") }}
               readOnly: true
             - name: secrets-bootstrap
               mountPath: /etc/bootstrap/secrets.toml
@@ -111,6 +111,8 @@ spec:
         - name: config
           configMap:
             name: {{ include "ccv-cell.verifier.fullname" . }}-config
+        - name: evm-secret
+          {{- include "ccv-cell.secretVolume" (dict "root" . "component" "verifier" "subComponent" "evm") | nindent 10 }}
         - name: secrets-app
           {{- include "ccv-cell.secretVolume" (dict "root" . "component" "verifier" "subComponent" "app") | nindent 10 }}
         - name: secrets-bootstrap
