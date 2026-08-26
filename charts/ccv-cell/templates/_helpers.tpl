@@ -38,13 +38,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 {{- end -}}
 
+{{- define "ccv-cell.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ccv-cell.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
 {{- define "ccv-cell.verifier.fullname" -}}
 {{- printf "%s-verifier" (include "ccv-cell.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{- define "ccv-cell.verifier.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ccv-cell.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{ include "ccv-cell.selectorLabels" . }}
 app.kubernetes.io/component: verifier
 {{- end -}}
 
@@ -58,8 +62,7 @@ app.kubernetes.io/component: verifier
 {{- end -}}
 
 {{- define "ccv-cell.aggregator.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ccv-cell.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{ include "ccv-cell.selectorLabels" . }}
 app.kubernetes.io/component: aggregator
 {{- end -}}
 
