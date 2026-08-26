@@ -653,6 +653,7 @@ verifier:
       #   #    time. 0 uses the standalone default; non-zero values must be at least 2 seconds.
       #   txm_block_time: "2s"
       #   # RPC endpoints used to reach this chain.
+      #   nodes:
       #     - name: node-1
       #       order: 1
       #       httpUrlRemoteRef:
