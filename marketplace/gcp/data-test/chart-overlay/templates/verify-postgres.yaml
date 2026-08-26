@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verify-postgres-init
+data:
+  init.sql: |
+    CREATE DATABASE aggregator;
+    CREATE DATABASE verifier;
+    CREATE DATABASE bootstrap;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verify-postgres
+  labels:
+    app.kubernetes.io/name: verify-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verify-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: verify-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685 # postgres:16-alpine
+          env:
+            - name: POSTGRES_USER
+              value: ccv
+            - name: POSTGRES_PASSWORD
+              value: ccv
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ccv"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: initdb
+          configMap:
+            name: verify-postgres-init
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verify-postgres
+  labels:
+    app.kubernetes.io/name: verify-postgres
+spec:
+  selector:
+    app.kubernetes.io/name: verify-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

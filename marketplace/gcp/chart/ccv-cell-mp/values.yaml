@@ -1,7 +1,8 @@
-# The aggregator gRPC endpoint is always exposed through a Gateway API GRPCRoute rendered by this
-# wrapper (templates/grpcroute.yaml), not by the subchart. The form supplies only the two knobs a
-# user must choose; everything else assumes a standard Gateway.
+# The aggregator gRPC endpoint is exposed through a Gateway API GRPCRoute rendered by this wrapper
+# (templates/grpcroute.yaml), not by the subchart. The form supplies only the knobs a user must
+# choose; everything else assumes a standard Gateway.
 grpcRoute:
+  enabled: true
   hostname: ""
   parentRefName: ""
   parentRefNamespace: ""
@@ -33,3 +34,6 @@ ccv-cell:
         type: gcpSecretStore
       bootstrap:
         type: gcpSecretStore
+        # Not a form option: KMS is the only production-supported keystore. The verify overlay
+        # switches this to postgres, which has no cloud dependency.
+        keystoreBackend: kms

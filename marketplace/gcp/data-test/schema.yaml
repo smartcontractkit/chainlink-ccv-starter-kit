@@ -1,0 +1,42 @@
+properties:
+  ccv-cell.aggregator.serviceAccount.name:
+    type: string
+    default: ccv-cell-aggregator
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: Aggregator identity (verify).
+        roles: []
+  ccv-cell.verifier.serviceAccount.name:
+    type: string
+    default: ccv-cell-verifier
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: Verifier identity (verify).
+        roles: []
+
+  ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: placeholder
+  ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: placeholder
+  ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: placeholder
+
+  ccv-cell.verifier.config.verifier_id:
+    type: string
+    default: committee-verifier-1
+  ccv-cell.verifier.config.signer_address:
+    type: string
+    default: "0x0000000000000000000000000000000000000001"
+
+  grpcRoute.enabled:
+    type: boolean
+    default: false
+
+required:
+  - name
+  - namespace

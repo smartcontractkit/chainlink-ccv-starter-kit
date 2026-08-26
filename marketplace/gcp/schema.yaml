@@ -92,16 +92,6 @@ properties:
       Secret Manager version holding the verifier bootstrap secrets.toml, e.g.
       projects/my-project/secrets/ccv-cell-verifier-bootstrap/versions/latest
     pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
-  ccv-cell.verifier.secrets.bootstrap.keystoreBackend:
-    type: string
-    title: Verifier keystore backend
-    description: >-
-      Where the verifier signing key lives. Cloud KMS is strongly recommended over postgres for
-      production.
-    default: kms
-    enum:
-      - kms
-      - postgres
 
   ccv-cell.verifier.config.verifier_id:
     type: string
@@ -113,6 +103,13 @@ properties:
     description: On-chain address of this verifier's result-signing key.
     pattern: '^0x[0-9a-fA-F]{40}$'
 
+  grpcRoute.enabled:
+    type: boolean
+    title: Expose the aggregator through a GRPCRoute
+    description: >-
+      Deploy a Gateway API GRPCRoute for the aggregator gRPC endpoint. The other cells must be able to
+      reach this aggregator, so leave this on unless you front it some other way.
+    default: true
   grpcRoute.hostname:
     type: string
     title: Aggregator hostname
@@ -146,11 +143,8 @@ required:
   - ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName
   - ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName
   - ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName
-  - ccv-cell.verifier.secrets.bootstrap.keystoreBackend
   - ccv-cell.verifier.config.verifier_id
   - ccv-cell.verifier.config.signer_address
-  - grpcRoute.hostname
-  - grpcRoute.parentRefName
 
 form:
   - widget: help

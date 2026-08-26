@@ -1,0 +1,82 @@
+grpcRoute:
+  enabled: false
+
+ccv-cell:
+  aggregator:
+    extraInitContainers:
+      - name: wait-for-postgres
+        image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685 # postgres:16-alpine
+        env:
+          - name: PGPASSWORD
+            value: ccv
+        command:
+          - sh
+          - -c
+          - |
+            until timeout 2 psql -h verify-postgres -U ccv -d aggregator -c 'SELECT 1' >/dev/null 2>&1; do
+              echo "waiting for postgres databases"; sleep 2;
+            done
+    config:
+      committee:
+        quorumConfigs:
+          "1":
+            sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
+            threshold: 1
+            signers:
+              - address: "0x00000000000000000000000000000000000000b1"
+        destinationVerifiers:
+          "2": "0x00000000000000000000000000000000000000c2"
+      clients:
+        - clientId: committee-verifier-1
+          groups: [default]
+          enabled: true
+    secrets:
+      app:
+        type: existingSecret
+        existingSecret:
+          name: verify-aggregator-app
+          key: secrets.toml
+
+  verifier:
+    extraInitContainers:
+      - name: wait-for-postgres
+        image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685 # postgres:16-alpine
+        env:
+          - name: PGPASSWORD
+            value: ccv
+        command:
+          - sh
+          - -c
+          - |
+            until timeout 2 psql -h verify-postgres -U ccv -d verifier -c 'SELECT 1' >/dev/null 2>&1 \
+              && timeout 2 psql -h verify-postgres -U ccv -d bootstrap -c 'SELECT 1' >/dev/null 2>&1; do
+              echo "waiting for postgres databases"; sleep 2;
+            done
+    config:
+      verifier_id: "committee-verifier-1"
+      signer_address: "0x0000000000000000000000000000000000000001"
+      aggregators:
+        - name: aggregator-1
+          secret_name: aggregator_1
+          useInClusterAggregator: true
+    evm:
+      config:
+        chains:
+          "16015286601757825753":
+            finality_depth: 0
+            nodes:
+              - name: node-1
+                http_url: "http://rpc.invalid"
+                order: 1
+    secrets:
+      app:
+        type: existingSecret
+        existingSecret:
+          name: verify-verifier-app
+          key: secrets.toml
+      bootstrap:
+        type: existingSecret
+        keystoreBackend: postgres
+        existingSecret:
+          name: verify-verifier-bootstrap
+          key: secrets.toml
