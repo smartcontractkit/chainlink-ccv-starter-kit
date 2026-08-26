@@ -231,7 +231,7 @@ is compromised.
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
-| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. `nodes[].httpUrlRemoteRef`/    `wsUrlRemoteRef` (used only when `verifier.secrets.evm.type` is `externalSecret`) tell the    ExternalSecret where to fetch that node's RPC URL(s) from.    Note: the map keys must be strings, wrapped in quotes. |
+| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. Each node takes either    `http_url`/`ws_url` or `httpUrlRemoteRef`/`wsUrlRemoteRef`, depending on    `verifier.secrets.evm.type` below.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.extraContainers | list | `[]` | Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates). |
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
@@ -304,7 +304,7 @@ is compromised.
 | verifier.secrets.evm.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.evm.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name holding a pre-built    `secrets.toml`, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.evm.labels | object | `{}` | Labels to add to the verifier evm Secret. |
-| verifier.secrets.evm.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
+| verifier.secrets.evm.type | string | `"values"` | Provisioning strategy: `values` (the default) renders `evm.toml` into the verifier    ConfigMap, not a Secret. `externalSecret`, `existingSecret`, `gcpSecretStore`, and    `awsSecretStore` all produce a Secret instead. |
 | verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets. |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |

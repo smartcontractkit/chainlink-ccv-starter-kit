@@ -634,15 +634,11 @@ verifier:
           # env: production
 
   evm:
-    # Non-secret scaffold for the verifier's EVM config: chain selectors, finality_depth,
-    # txm_block_time, node name/order. RPC URLs come from httpUrlRemoteRef/wsUrlRemoteRef instead.
-    # verifier.secrets.evm below decides how the file is produced: externalSecret (the default)
-    # merges this tree with the fetched URLs; existingSecret/gcpSecretStore/awsSecretStore ignore it
-    # and mount a pre-built file instead, since RPC URLs commonly embed a provider API key.
+    # Rendered into evm.toml (see verifier.secrets.evm below for how the file is produced).
     config:
-      # -- RPC and finality settings per EVM chain, keyed by chain selector. `nodes[].httpUrlRemoteRef`/
-      #    `wsUrlRemoteRef` (used only when `verifier.secrets.evm.type` is `externalSecret`) tell the
-      #    ExternalSecret where to fetch that node's RPC URL(s) from.
+      # -- RPC and finality settings per EVM chain, keyed by chain selector. Each node takes either
+      #    `http_url`/`ws_url` or `httpUrlRemoteRef`/`wsUrlRemoteRef`, depending on
+      #    `verifier.secrets.evm.type` below.
       #    Note: the map keys must be strings, wrapped in quotes.
       chains: {}
       # "1":
@@ -656,8 +652,12 @@ verifier:
       #   nodes:
       #     - name: node-1
       #       order: 1
-      #       httpUrlRemoteRef:
-      #         key: /some/path/for/chain-1-node-1-http-url
+      #       # `http_url`/`ws_url` are used directly when `verifier.secrets.evm.type` is `values`.
+      #       http_url: "http://rpc-url.com"
+      #       ws_url: "ws://rpc-url.com"
+      #       # `httpUrlRemoteRef`/`wsUrlRemoteRef` are used when `verifier.secrets.evm.type` is `externalSecret`.
+      #       # httpUrlRemoteRef:
+      #       #   key: /some/path/for/chain-1-node-1-http-url
       #       # wsUrlRemoteRef:
       #       #   key: /some/path/for/chain-1-node-1-ws-url
 
@@ -799,9 +799,10 @@ verifier:
       # -- Labels to add to the verifier evm Secret.
       labels: {}
 
-      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.
-      #    Configure the values below for the chosen type.
-      type: externalSecret
+      # -- Provisioning strategy: `values` (the default) renders `evm.toml` into the verifier
+      #    ConfigMap, not a Secret. `externalSecret`, `existingSecret`, `gcpSecretStore`, and
+      #    `awsSecretStore` all produce a Secret instead.
+      type: values
 
       existingSecret:
         # -- Name of an existing Kubernetes Secret to use as the evm secret.
