@@ -231,7 +231,7 @@ is compromised.
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
-| verifier.evm.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. Each node takes either    `http_url`/`ws_url` or `httpUrlRemoteRef`/`wsUrlRemoteRef`, depending on    `verifier.secrets.evm.type` below.    Note: the map keys must be strings, wrapped in quotes. |
+| verifier.evm.config.chains | object | `{}` | RPC and finality settings per EVM chain, keyed by chain selector. Each node takes either    `http_url`/`ws_url` or `httpUrlRemoteRef`/`wsUrlRemoteRef`, depending on    `verifier.secrets.evm.type` below.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.extraContainers | list | `[]` | Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates). |
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |

@@ -635,6 +635,7 @@ verifier:
 
   evm:
     # If your RPC endpoints are not secrets, you can simply configure them here, directly. Otherwise, see `.verifier.secrets.evm` below on how to configure them as a secret.
+    config:
       # -- RPC and finality settings per EVM chain, keyed by chain selector. Each node takes either
       #    `http_url`/`ws_url` or `httpUrlRemoteRef`/`wsUrlRemoteRef`, depending on
       #    `verifier.secrets.evm.type` below.
