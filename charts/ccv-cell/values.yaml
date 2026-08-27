@@ -634,8 +634,7 @@ verifier:
           # env: production
 
   evm:
-    # Rendered into evm.toml (see verifier.secrets.evm below for how the file is produced).
-    config:
+    # If your RPC endpoints are not secrets, you can simply configure them here, directly. Otherwise, see `.verifier.secrets.evm` below on how to configure them as a secret.
       # -- RPC and finality settings per EVM chain, keyed by chain selector. Each node takes either
       #    `http_url`/`ws_url` or `httpUrlRemoteRef`/`wsUrlRemoteRef`, depending on
       #    `verifier.secrets.evm.type` below.
@@ -799,9 +798,9 @@ verifier:
       # -- Labels to add to the verifier evm Secret.
       labels: {}
 
-      # -- Provisioning strategy: `values` (the default) renders `evm.toml` into the verifier
-      #    ConfigMap, not a Secret. `externalSecret`, `existingSecret`, `gcpSecretStore`, and
-      #    `awsSecretStore` all produce a Secret instead.
+      # -- Provisioning strategy: the default, `values`, uses .verifier.evm.config to render this as a simple ConfigMap.
+      #    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`, or
+      #    `awsSecretStore` to configure this as a secret instead.
       type: values
 
       existingSecret:
