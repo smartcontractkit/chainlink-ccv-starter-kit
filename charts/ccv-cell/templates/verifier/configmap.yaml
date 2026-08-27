@@ -40,6 +40,7 @@ data:
     ) }}
 {{- end }}
 {{ merge (dict "aggregators" $aggregators) $vcfg | toToml | indent 4 }}
+{{- if eq .Values.verifier.secrets.evm.type "values" }}
   evm.toml: |
 {{- $ecfg := deepCopy .Values.verifier.evm.config }}
 {{- range $chain := $ecfg.chains }}
@@ -56,4 +57,5 @@ data:
 {{- $_ := set $chain "nodes" $nodes }}
 {{- end }}
 {{ $ecfg | toToml | indent 4 }}
+{{- end }}
 {{- end }}
