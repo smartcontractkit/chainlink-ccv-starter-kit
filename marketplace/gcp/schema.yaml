@@ -1,0 +1,163 @@
+x-google-marketplace:
+  schemaVersion: v2
+  applicationApiVersion: v1beta1
+
+  publishedVersion: "$TAG"
+  publishedVersionMetadata:
+    releaseNote: >-
+      Initial release.
+    releaseTypes:
+      - Feature
+    recommended: false
+
+  images:
+    '':
+      properties:
+        ccv-cell.aggregator.image.registry:
+          type: REGISTRY
+        ccv-cell.aggregator.image.repository:
+          type: REPO_WITHOUT_REGISTRY
+        ccv-cell.aggregator.image.tag:
+          type: TAG
+    verifier:
+      properties:
+        ccv-cell.verifier.image.registry:
+          type: REGISTRY
+        ccv-cell.verifier.image.repository:
+          type: REPO_WITHOUT_REGISTRY
+        ccv-cell.verifier.image.tag:
+          type: TAG
+
+  clusterConstraints:
+    k8sVersion: ">=1.19.0"
+    istio:
+      type: OPTIONAL
+    resources:
+      - replicas: 1
+        requests:
+          cpu: 2
+          memory: 2Gi
+
+properties:
+  name:
+    type: string
+    x-google-marketplace:
+      type: NAME
+  namespace:
+    type: string
+    x-google-marketplace:
+      type: NAMESPACE
+
+  ccv-cell.aggregator.serviceAccount.name:
+    type: string
+    title: Aggregator service account
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: >-
+          Identity of the aggregator pod. It needs no Kubernetes API access; it exists so it can be
+          bound to a Google service account through Workload Identity Federation for access to
+          Secret Manager and Cloud SQL.
+        roles: []
+  ccv-cell.verifier.serviceAccount.name:
+    type: string
+    title: Verifier service account
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: >-
+          Identity of the verifier pod. It needs no Kubernetes API access; it exists so it can be
+          bound to a Google service account through Workload Identity Federation for access to
+          Secret Manager, Cloud KMS and Cloud SQL.
+        roles: []
+
+  ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Aggregator secrets, Secret Manager version
+    description: >-
+      Secret Manager version holding the aggregator secrets.toml, e.g.
+      projects/my-project/secrets/ccv-cell-aggregator/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+  ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Verifier secrets, Secret Manager version
+    description: >-
+      Secret Manager version holding the verifier secrets.toml, e.g.
+      projects/my-project/secrets/ccv-cell-verifier/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+  ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Verifier bootstrap secrets, Secret Manager version
+    description: >-
+      Secret Manager version holding the verifier bootstrap secrets.toml, e.g.
+      projects/my-project/secrets/ccv-cell-verifier-bootstrap/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+
+  ccv-cell.verifier.config.verifier_id:
+    type: string
+    title: Verifier ID
+    description: Unique identifier of this verifier within the committee.
+  ccv-cell.verifier.config.signer_address:
+    type: string
+    title: Signer address
+    description: On-chain address of this verifier's result-signing key.
+    pattern: '^0x[0-9a-fA-F]{40}$'
+
+  grpcRoute.enabled:
+    type: boolean
+    title: Expose the aggregator through a GRPCRoute
+    description: >-
+      Deploy a Gateway API GRPCRoute for the aggregator gRPC endpoint. The other cells must be able to
+      reach this aggregator, so leave this on unless you front it some other way.
+    default: true
+  grpcRoute.hostname:
+    type: string
+    title: Aggregator hostname
+    description: >-
+      Hostname the aggregator gRPC endpoint is served on, matched by the GRPCRoute. Treat as stable:
+      changing it later requires updating every peer and the indexer.
+    default: your-ccv-aggregator.example.com
+  grpcRoute.parentRefName:
+    type: string
+    title: Gateway name
+    description: >-
+      Name of the Gateway API Gateway that fronts the GRPCRoute. The Gateway must terminate TLS and
+      support HTTP/2 end to end for gRPC.
+  grpcRoute.parentRefNamespace:
+    type: string
+    title: Gateway namespace
+    description: Namespace of the Gateway. Leave empty if it lives in the deployment namespace.
+    default: ""
+  grpcRoute.parentRefSectionName:
+    type: string
+    title: Gateway listener (sectionName)
+    description: >-
+      Name of the Gateway listener to attach to. Leave empty to attach to all compatible listeners.
+    default: ""
+
+required:
+  - name
+  - namespace
+  - ccv-cell.aggregator.serviceAccount.name
+  - ccv-cell.verifier.serviceAccount.name
+  - ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.verifier.config.verifier_id
+  - ccv-cell.verifier.config.signer_address
+
+form:
+  - widget: help
+    description: >-
+      <p>A CCV Cell needs external dependencies that this deployment does not create: a PostgreSQL
+      cluster (Cloud SQL recommended), Secret Manager secrets holding the connection strings and
+      API credentials, and Cloud KMS keys for signing. Create them before deploying, and bind the
+      service accounts above to a Google service account with access to them through
+      <a href="https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity">Workload
+      Identity Federation for GKE</a>.</p>
+      <p>The aggregator gRPC endpoint is exposed through a Gateway API GRPCRoute. You must already
+      have a Gateway that terminates TLS and supports HTTP/2 end to end; supply its name and the
+      hostname below.</p>
+      <p>The committee quorum, chain selectors and RPC endpoints are structured configuration that
+      this form cannot express. Supply them with <code>helm upgrade</code> after the initial
+      deployment.</p>

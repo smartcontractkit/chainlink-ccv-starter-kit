@@ -1,0 +1,32 @@
+{{- $sub := index .Subcharts "ccv-cell" }}
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    {{- include "ccv-cell.selectorLabels" $sub | nindent 4 }}
+  annotations:
+    # PLACEHOLDER: partner_id/product_id must match the Marketplace listing IDs.
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "chainlink", "product_id": "ccv-cell", "partner_name": "Chainlink"}'
+spec:
+  descriptor:
+    type: CCV Cell
+    version: "{{ .Chart.AppVersion }}"
+    description: >-
+      A Chainlink CCV Cell: a committee verifier and its aggregator.
+  selector:
+    matchLabels:
+      {{- include "ccv-cell.selectorLabels" $sub | nindent 6 }}
+  addOwnerRef: true
+  componentKinds:
+    - group: v1
+      kind: ConfigMap
+    - group: v1
+      kind: Service
+    - group: apps/v1
+      kind: StatefulSet
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+    - group: secrets-store.csi.x-k8s.io
+      kind: SecretProviderClass

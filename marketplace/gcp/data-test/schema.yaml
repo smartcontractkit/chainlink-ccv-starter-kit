@@ -1,0 +1,61 @@
+x-google-marketplace:
+  images:
+    postgres:
+      properties:
+        verify.postgres.image.registry:
+          type: REGISTRY
+        verify.postgres.image.repository:
+          type: REPO_WITHOUT_REGISTRY
+        verify.postgres.image.tag:
+          type: TAG
+    curl:
+      properties:
+        verify.curl.image.registry:
+          type: REGISTRY
+        verify.curl.image.repository:
+          type: REPO_WITHOUT_REGISTRY
+        verify.curl.image.tag:
+          type: TAG
+
+properties:
+  ccv-cell.aggregator.serviceAccount.name:
+    type: string
+    default: ccv-cell-aggregator
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: Aggregator identity (verify).
+        roles: []
+  ccv-cell.verifier.serviceAccount.name:
+    type: string
+    default: ccv-cell-verifier
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: Verifier identity (verify).
+        roles: []
+
+  ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: placeholder
+  ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: placeholder
+  ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: placeholder
+
+  ccv-cell.verifier.config.verifier_id:
+    type: string
+    default: committee-verifier-1
+  ccv-cell.verifier.config.signer_address:
+    type: string
+    default: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+
+  grpcRoute.enabled:
+    type: boolean
+    default: false
+
+required:
+  - name
+  - namespace

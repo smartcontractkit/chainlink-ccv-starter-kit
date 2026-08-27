@@ -1,0 +1,87 @@
+grpcRoute:
+  enabled: false
+
+verify:
+  postgres:
+    image:
+      registry: docker.io
+      repository: library/postgres
+      tag: 16-alpine
+  curl:
+    image:
+      registry: docker.io
+      repository: curlimages/curl
+      tag: 8.21.0
+
+ccv-cell:
+  aggregator:
+    config:
+      committee:
+        quorumConfigs:
+          "16015286601757825753":
+            sourceVerifierAddress: "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
+            threshold: 1
+            signers:
+              - address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+        destinationVerifiers:
+          "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
+      clients:
+        - clientId: committee-verifier-1
+          groups: [default]
+          enabled: true
+    secrets:
+      app:
+        type: existingSecret
+        existingSecret:
+          name: verify-aggregator-app
+          key: secrets.toml
+
+  verifier:
+    bootstrap:
+      config:
+        key_import:
+          path: /etc/ccv/migration/key.json
+          password_path: /etc/ccv/migration/export-password.txt
+          expected_id: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+    extraVolumes:
+      - name: key-import
+        secret:
+          secretName: verify-verifier-key-import
+    extraVolumeMounts:
+      - name: key-import
+        mountPath: /etc/ccv/migration
+        readOnly: true
+    config:
+      verifier_id: "committee-verifier-1"
+      signer_address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+      aggregators:
+        - name: aggregator-1
+          secret_name: aggregator_1
+          useInClusterAggregator: true
+      committee_verifier_addresses:
+        "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
+      on_ramp_addresses:
+        "16015286601757825753": "0xA94E45744553F4B2bea9DfB8979a02962B980732"
+      rmn_remote_addresses:
+        "16015286601757825753": "0xACD1e9A75cA486c6883BC5835a022536fA67fCbF"
+    evm:
+      config:
+        chains:
+          "16015286601757825753":
+            finality_depth: 0
+            nodes:
+              - name: node-1
+                http_url: "https://ethereum-sepolia-rpc.publicnode.com"
+                order: 1
+    secrets:
+      app:
+        type: existingSecret
+        existingSecret:
+          name: verify-verifier-app
+          key: secrets.toml
+      bootstrap:
+        type: existingSecret
+        keystoreBackend: postgres
+        existingSecret:
+          name: verify-verifier-bootstrap
+          key: secrets.toml

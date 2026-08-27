@@ -1,0 +1,29 @@
+{{- $sub := index .Subcharts "ccv-cell" }}
+{{- $agg := include "ccv-cell.aggregator.fullname" $sub }}
+{{- $ver := printf "%s-headless" (include "ccv-cell.verifier.fullname" $sub) }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-tester
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  restartPolicy: Never
+  containers:
+    - name: tester
+      image: {{ include "ccv-cell-mp.image" .Values.verify.curl.image | quote }}
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          agg="http://{{ $agg }}:{{ $sub.Values.aggregator.service.ports.health }}/health/ready"
+          ver="http://{{ $ver }}:8100/health"
+          deadline=$(( $(date +%s) + 300 ))
+          for url in "$agg" "$ver"; do
+            until curl -m1 -fsS -o /dev/null "$url"; do
+              [ "$(date +%s)" -ge "$deadline" ] && echo "timed out waiting for $url" && exit 1
+              echo "waiting for $url"; sleep 5
+            done
+            echo "ok: $url"
+          done
