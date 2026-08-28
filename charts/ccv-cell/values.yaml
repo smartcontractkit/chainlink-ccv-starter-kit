@@ -139,7 +139,8 @@ aggregator:
 
     orphanRecovery:
       # -- Enable recovery of orphaned aggregation records.
-      enabled: false
+      #    This can happen if there is a pod crash mid-report build, and is recommended to be left enabled.
+      enabled: true
       # -- How often orphan recovery runs.
       interval: "5m0s"
       # -- Timeout for each check-aggregation operation.
