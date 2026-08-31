@@ -614,11 +614,11 @@ verifier:
           # -- Disable TLS for the Beholder client.
           InsecureConnection: true
           # -- Path to the CA certificate file for the Beholder client.
-          CACertFile: /etc/ssl/certs/otel-collector.pem
+          CACertFile: ""
           # -- gRPC endpoint for the Beholder client to send data to the collector.
-          OtelExporterGRPCEndpoint: "otel-collector:4317"
+          OtelExporterGRPCEndpoint: ""
           # -- HTTP endpoint for the Beholder client to send data to the collector.
-          OtelExporterHTTPEndpoint: "otel-collector:4318"
+          OtelExporterHTTPEndpoint: ""
           # -- Enable log streaming to the collector.
           LogStreamingEnabled: false
           # -- Minimum log level to stream to Beholder.

@@ -198,14 +198,14 @@ is compromised.
 | nameOverride | string | `""` | Override the chart name used in resource names. |
 | verifier.affinity | object | `{}` | Affinity rules for pod scheduling. See [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). |
 | verifier.annotations | object | `{}` | Annotations to add to the verifier Deployment object. |
-| verifier.bootstrap.config.Monitoring.Beholder.CACertFile | string | `"/etc/ssl/certs/otel-collector.pem"` | Path to the CA certificate file for the Beholder client. |
+| verifier.bootstrap.config.Monitoring.Beholder.CACertFile | string | `""` | Path to the CA certificate file for the Beholder client. |
 | verifier.bootstrap.config.Monitoring.Beholder.Enabled | bool | `false` | Enable Beholder telemetry. |
 | verifier.bootstrap.config.Monitoring.Beholder.InsecureConnection | bool | `true` | Disable TLS for the Beholder client. |
 | verifier.bootstrap.config.Monitoring.Beholder.LogStreamingEnabled | bool | `false` | Enable log streaming to the collector. |
 | verifier.bootstrap.config.Monitoring.Beholder.LogStreamingLevel | string | `"info"` | Minimum log level to stream to Beholder. |
 | verifier.bootstrap.config.Monitoring.Beholder.MetricReaderInterval | int | `60` | Interval to scrape metrics, in seconds. |
-| verifier.bootstrap.config.Monitoring.Beholder.OtelExporterGRPCEndpoint | string | `"otel-collector:4317"` | gRPC endpoint for the Beholder client to send data to the collector. |
-| verifier.bootstrap.config.Monitoring.Beholder.OtelExporterHTTPEndpoint | string | `"otel-collector:4318"` | HTTP endpoint for the Beholder client to send data to the collector. |
+| verifier.bootstrap.config.Monitoring.Beholder.OtelExporterGRPCEndpoint | string | `""` | gRPC endpoint for the Beholder client to send data to the collector. |
+| verifier.bootstrap.config.Monitoring.Beholder.OtelExporterHTTPEndpoint | string | `""` | HTTP endpoint for the Beholder client to send data to the collector. |
 | verifier.bootstrap.config.Monitoring.Beholder.TelemetryAttributes | object | `{}` | Extra labels to add during OTel transmission. |
 | verifier.bootstrap.config.Monitoring.Beholder.TraceBatchTimeout | int | `5` | Timeout for a batch of traces, in seconds. |
 | verifier.bootstrap.config.Monitoring.Beholder.TraceSampleRatio | float | `0.1` | Ratio of traces to sample. |
