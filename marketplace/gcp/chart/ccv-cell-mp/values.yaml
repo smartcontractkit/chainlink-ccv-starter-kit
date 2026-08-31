@@ -7,9 +7,6 @@ grpcRoute:
 
 ccv-cell:
   aggregator:
-    image:
-      # Marketplace parameterizes repository/tag, and the chart rejects tag and digest together.
-      digest: ""
     # Marketplace forbids charts from creating service accounts, it creates them and passes the name.
     serviceAccount:
       create: false
@@ -18,8 +15,6 @@ ccv-cell:
         type: gcpSecretStore
 
   verifier:
-    image:
-      digest: ""
     serviceAccount:
       create: false
     secrets:

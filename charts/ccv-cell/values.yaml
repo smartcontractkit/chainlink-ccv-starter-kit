@@ -22,9 +22,10 @@ aggregator:
     # -- Image repository.
     repository: chainlink/chainlink-ccv-aggregator
     # -- Image tag. Mutually exclusive with `digest`.
-    tag: ""
+    #    All tags in the default repository are immutable.
+    tag: "v0.6.0"
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: "sha256:f4279336561689ce13a296093a832bc58ea8d01632d8658868a4df8eeaf3ce0b"
+    digest: ""
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
@@ -495,9 +496,10 @@ verifier:
     # -- Image repository.
     repository: chainlink/chainlink-ccv-verifier
     # -- Image tag. Mutually exclusive with `digest`.
-    tag: ""
+    #    All tags in the default repository are immutable.
+    tag: "v0.6.0"
     # -- Image digest (`sha256:...`). Mutually exclusive with `tag`.
-    digest: "sha256:42d1f18aafca51ccd242375cc2ae84824c9f7101c5e0fbee8d5fb43ba570c9ce"
+    digest: ""
     # -- Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
     pullPolicy: IfNotPresent
 
