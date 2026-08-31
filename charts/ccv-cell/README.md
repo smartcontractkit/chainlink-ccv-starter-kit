@@ -137,10 +137,10 @@ is compromised.
 | aggregator.httpRoute.hostnames | list | `[]` | Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Treat as stable, changing it requires updating every peer and the indexer. |
 | aggregator.httpRoute.labels | object | `{}` | Labels to add to the HTTPRoute. |
 | aggregator.httpRoute.parentRefs | list | `[]` | Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
-| aggregator.image.digest | string | `"sha256:5f46057c7e61db5df5202a953599d4dd3c587f796e9feabe02fc6a62051d4a24"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| aggregator.image.digest | string | `"sha256:f4279336561689ce13a296093a832bc58ea8d01632d8658868a4df8eeaf3ce0b"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | aggregator.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | aggregator.image.registry | string | `""` | OCI registry, overrides `global.image.registry` when set. |
-| aggregator.image.repository | string | `"w0i8p0z9/chainlink-ccv-aggregator"` | Image repository. |
+| aggregator.image.repository | string | `"chainlink/chainlink-ccv-aggregator"` | Image repository. |
 | aggregator.image.tag | string | `""` | Image tag. Mutually exclusive with `digest`. |
 | aggregator.ingress.annotations | object | `{}` | Annotations to add to the Ingress (e.g. controller-specific TLS/HTTP2 or gRPC wiring). |
 | aggregator.ingress.className | string | `""` | Ingress class name. See [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
@@ -236,10 +236,10 @@ is compromised.
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
 | verifier.extraVolumes | list | `[]` | Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
-| verifier.image.digest | string | `"sha256:7115f9d35509bbf2587105d5cce9206a28a99355db7f92807169e5e96158ce89"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| verifier.image.digest | string | `"sha256:42d1f18aafca51ccd242375cc2ae84824c9f7101c5e0fbee8d5fb43ba570c9ce"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | verifier.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | verifier.image.registry | string | `""` | OCI registry; overrides `global.image.registry` when set. |
-| verifier.image.repository | string | `"w0i8p0z9/chainlink-ccv-verifier"` | Image repository. |
+| verifier.image.repository | string | `"chainlink/chainlink-ccv-verifier"` | Image repository. |
 | verifier.image.tag | string | `""` | Image tag. Mutually exclusive with `digest`. |
 | verifier.labels | object | `{}` | Labels to add to the verifier Deployment object. |
 | verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"bootstrap-info"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
