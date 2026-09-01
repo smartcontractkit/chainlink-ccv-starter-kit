@@ -11,8 +11,8 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: public.ecr.aws/chainlink
-  ECR_REPO_NAMESPACE: helm
+  ECR_REGISTRY: public.ecr.aws
+  ECR_REPO_NAMESPACE: chainlink/helm
   CHART: charts/ccv-cell
 
 jobs:
