@@ -50,8 +50,9 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 - A secrets manager:
   - The chart has first class support for [External Secrets Operator](https://external-secrets.io/),
     [GCP's Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component),
-    and [AWS Secrets Manager](https://github.com/aws/secrets-store-csi-driver-provider-aws) (via the ASCP,
-    with IRSA or EKS Pod Identity).
+    [AWS Secrets Manager](https://github.com/aws/secrets-store-csi-driver-provider-aws) (via the ASCP,
+    with IRSA or EKS Pod Identity), and [Azure Key Vault](https://azure.github.io/secrets-store-csi-driver-provider-azure/)
+    (via the Azure Key Vault provider for the Secrets Store CSI Driver, with Workload Identity or Pod Identity).
   - If you use some other secrets manager, you should instead use the "existing secret" mechanism and manage the secret
     yourself.
   - Never directly provide credentials through the chart's values. Values should be versioned in your VCS, and are no
@@ -183,6 +184,13 @@ is compromised.
 | aggregator.secrets.app.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
 | aggregator.secrets.app.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | aggregator.secrets.app.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| aggregator.secrets.app.azureKeyVault | object | `{"clientId":"","keyvaultName":"","secretName":"","secretProviderClass":{"name":""},"tenantId":"","usePodIdentity":false}` | Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).    Requires the provider installed on the AKS cluster and either    Workload Identity or Azure AD Pod Identity configured for `aggregator.serviceAccount`.    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `aggregator.podLabels`. |
+| aggregator.secrets.app.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.    Leave empty when using Pod Identity (`usePodIdentity: true`). |
+| aggregator.secrets.app.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| aggregator.secrets.app.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built `secrets.toml`. |
+| aggregator.secrets.app.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| aggregator.secrets.app.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| aggregator.secrets.app.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
 | aggregator.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | aggregator.secrets.app.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the app secret. |
 | aggregator.secrets.app.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
@@ -192,14 +200,14 @@ is compromised.
 | aggregator.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | aggregator.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | aggregator.secrets.app.labels | object | `{}` | Labels to add to the aggregator app Secret. |
-| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
+| aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.    Configure the values below for the chosen type. |
 | aggregator.service.annotations | object | `{}` | Annotations to add to the aggregator Service. |
 | aggregator.service.clusterIP | string | `""` | Static ClusterIP to assign to the Service. Leave empty to let Kubernetes allocate one. |
 | aggregator.service.labels | object | `{}` | Labels to add to the aggregator Service. |
 | aggregator.service.ports.grpc | int | `50051` | Port for the gRPC endpoint. |
 | aggregator.service.ports.health | int | `8080` | Port for the health endpoint. |
 | aggregator.service.type | string | `"ClusterIP"` | Service type. See [Service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
-| aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `aggregator.secrets.app.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secret. |
+| aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `aggregator.secrets.app.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secret.    For Azure Workload Identity (required by `aggregator.secrets.app.azureKeyVault` with `usePodIdentity: false`),    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID. |
 | aggregator.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the aggregator. |
 | aggregator.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | aggregator.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |
@@ -275,6 +283,13 @@ is compromised.
 | verifier.secrets.app.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
 | verifier.secrets.app.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.app.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| verifier.secrets.app.azureKeyVault | object | `{"clientId":"","keyvaultName":"","secretName":"","secretProviderClass":{"name":""},"tenantId":"","usePodIdentity":false}` | Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).    Requires the provider installed on the AKS cluster and either    Workload Identity or Azure AD Pod Identity configured for `verifier.serviceAccount`.    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `verifier.podLabels`. |
+| verifier.secrets.app.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.    Leave empty when using Pod Identity (`usePodIdentity: true`). |
+| verifier.secrets.app.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| verifier.secrets.app.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built `secrets.toml`. |
+| verifier.secrets.app.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.app.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| verifier.secrets.app.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
 | verifier.secrets.app.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.app.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the app secret. |
 | verifier.secrets.app.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
@@ -284,13 +299,20 @@ is compromised.
 | verifier.secrets.app.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.app.labels | object | `{}` | Labels to add to the verifier app Secret. |
-| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
+| verifier.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.    Configure the values below for the chosen type. |
 | verifier.secrets.bootstrap.annotations | object | `{}` | Annotations to add to the verifier bootstrap Secret. |
 | verifier.secrets.bootstrap.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`.    For IRSA: annotate the ServiceAccount with `eks.amazonaws.com/role-arn`.    For EKS Pod Identity: create a Pod Identity association via the EKS console/CLI; set `usePodIdentity: true`. |
 | verifier.secrets.bootstrap.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |
 | verifier.secrets.bootstrap.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
 | verifier.secrets.bootstrap.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.bootstrap.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| verifier.secrets.bootstrap.azureKeyVault | object | `{"clientId":"","keyvaultName":"","secretName":"","secretProviderClass":{"name":""},"tenantId":"","usePodIdentity":false}` | Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).    Requires the provider installed on the AKS cluster and either    Workload Identity or Azure AD Pod Identity configured for `verifier.serviceAccount`.    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `verifier.podLabels`. |
+| verifier.secrets.bootstrap.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.    Leave empty when using Pod Identity (`usePodIdentity: true`). |
+| verifier.secrets.bootstrap.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| verifier.secrets.bootstrap.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built `secrets.toml`. |
+| verifier.secrets.bootstrap.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.bootstrap.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| verifier.secrets.bootstrap.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
 | verifier.secrets.bootstrap.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.bootstrap.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the bootstrap secret. |
 | verifier.secrets.bootstrap.externalSecret.dbUrlRemoteRef | object | `{}` | RemoteRef for the database URL secret.    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef). |
@@ -304,13 +326,20 @@ is compromised.
 | verifier.secrets.bootstrap.kms.ecdsaKeyId | string | `""` | AWS KMS key ID for the ECDSA key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
-| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.    Configure the values below for the chosen type. |
+| verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.    Configure the values below for the chosen type. |
 | verifier.secrets.evm.annotations | object | `{}` | Annotations to add to the verifier evm Secret. |
 | verifier.secrets.evm.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`. |
 | verifier.secrets.evm.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |
 | verifier.secrets.evm.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built `secrets.toml`. |
 | verifier.secrets.evm.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.evm.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| verifier.secrets.evm.azureKeyVault | object | `{"clientId":"","keyvaultName":"","secretName":"","secretProviderClass":{"name":""},"tenantId":"","usePodIdentity":false}` | Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).    Requires the provider installed on the AKS cluster and either    Workload Identity or Azure AD Pod Identity configured for `verifier.serviceAccount`.    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `verifier.podLabels`. |
+| verifier.secrets.evm.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.    Leave empty when using Pod Identity (`usePodIdentity: true`). |
+| verifier.secrets.evm.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| verifier.secrets.evm.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built `secrets.toml`. |
+| verifier.secrets.evm.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.evm.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| verifier.secrets.evm.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
 | verifier.secrets.evm.existingSecret.key | string | `"secrets.toml"` | Key inside the existing Secret that holds the secrets file. |
 | verifier.secrets.evm.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret to use as the evm secret. |
 | verifier.secrets.evm.externalSecret.name | string | `""` | Name of the ExternalSecret resource to create. |
@@ -319,8 +348,8 @@ is compromised.
 | verifier.secrets.evm.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.evm.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name holding a pre-built    `secrets.toml`, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.evm.labels | object | `{}` | Labels to add to the verifier evm Secret. |
-| verifier.secrets.evm.type | string | `"values"` | Provisioning strategy: the default, `values`, uses .verifier.evm.config to render this as a simple ConfigMap.    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`, or    `awsSecretStore` to configure this as a secret instead. |
-| verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets. |
+| verifier.secrets.evm.type | string | `"values"` | Provisioning strategy: the default, `values`, uses .verifier.evm.config to render this as a simple ConfigMap.    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`,    `awsSecretStore`, or `azureKeyVault` to configure this as a secret instead. |
+| verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets.    For Azure Workload Identity (required by `verifier.secrets.*.azureKeyVault` with `usePodIdentity: false`),    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID. |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | verifier.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |

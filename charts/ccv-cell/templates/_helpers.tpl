@@ -88,7 +88,7 @@ app.kubernetes.io/component: aggregator
 {{- end -}}
 
 {{/*
-Name of the K8s Secret (existingSecret/externalSecret) or SecretProviderClass (gcpSecretStore/awsSecretStore) backing a secret block.
+Name of the K8s Secret (existingSecret/externalSecret) or SecretProviderClass (gcpSecretStore/awsSecretStore/azureKeyVault) backing a secret block.
 include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subComponent" "app")
 */}}
 {{- define "ccv-cell.secretName" -}}
@@ -104,13 +104,15 @@ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subCompon
     {{- $secret.gcpSecretStore.secretProviderClass.name | default $default -}}
   {{- else if eq $secret.type "awsSecretStore" -}}
     {{- $secret.awsSecretStore.secretProviderClass.name | default $default -}}
+  {{- else if eq $secret.type "azureKeyVault" -}}
+    {{- $secret.azureKeyVault.secretProviderClass.name | default $default -}}
   {{- else -}}
-    {{- fail (printf "invalid secret type %q (must be existingSecret, externalSecret, gcpSecretStore, or awsSecretStore)" $secret.type) -}}
+    {{- fail (printf "invalid secret type %q (must be existingSecret, externalSecret, gcpSecretStore, awsSecretStore, or azureKeyVault)" $secret.type) -}}
   {{- end -}}
 {{- end -}}
 
 {{/*
-Volume definition for a secret block. CSI-backed for gcpSecretStore/awsSecretStore, plain Secret otherwise.
+Volume definition for a secret block. CSI-backed for gcpSecretStore/awsSecretStore/azureKeyVault, plain Secret otherwise.
 include "ccv-cell.secretVolume" (dict "root" . "component" "aggregator" "subComponent" "app")
 */}}
 {{- define "ccv-cell.secretVolume" -}}
@@ -123,7 +125,7 @@ csi:
   readOnly: true
   volumeAttributes:
     secretProviderClass: {{ $name }}
-  {{- else if eq $secret.type "awsSecretStore" }}
+  {{- else if list "awsSecretStore" "azureKeyVault" | has $secret.type }}
 csi:
   driver: secrets-store.csi.k8s.io
   readOnly: true
@@ -132,6 +134,68 @@ csi:
   {{- else }}
 secret:
   secretName: {{ $name }}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Full SecretProviderClass resource for a CSI-backed secret block (gcpSecretStore/awsSecretStore/azureKeyVault).
+include "ccv-cell.secretProviderClass" (dict "root" . "component" "verifier" "subComponent" "app")
+*/}}
+{{- define "ccv-cell.secretProviderClass" -}}
+  {{- $componentRoot := index .root.Values .component -}}
+  {{- $secret := index $componentRoot.secrets .subComponent -}}
+  {{- $path := printf "%s.secrets.%s" .component .subComponent -}}
+  {{- if list "gcpSecretStore" "awsSecretStore" "azureKeyVault" | has $secret.type }}
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: {{ include "ccv-cell.secretName" . }}
+  labels:
+    {{- include (printf "ccv-cell.%s.labels" .component) .root | nindent 4 }}
+    {{- with $secret.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $secret.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+    {{- if eq $secret.type "gcpSecretStore" }}
+  provider: gke
+  parameters:
+    secrets: |
+      - resourceName: {{ required (printf "%s.gcpSecretStore.secretVersionResourceName is required when %s.type is gcpSecretStore" $path $path) $secret.gcpSecretStore.secretVersionResourceName | quote }}
+        path: "secrets.toml"
+    {{- else if eq $secret.type "awsSecretStore" }}
+  provider: aws
+  parameters:
+    objects: |
+      - objectName: {{ required (printf "%s.awsSecretStore.secretName is required when %s.type is awsSecretStore" $path $path) $secret.awsSecretStore.secretName | quote }}
+        objectType: "secretsmanager"
+        objectAlias: "secrets.toml"
+    {{- with $secret.awsSecretStore.region }}
+    region: {{ . | quote }}
+    {{- end }}
+    {{- if $secret.awsSecretStore.usePodIdentity }}
+    usePodIdentity: "true"
+    {{- end }}
+    {{- else if eq $secret.type "azureKeyVault" }}
+  provider: azure
+  parameters:
+    usePodIdentity: {{ ternary "true" "false" $secret.azureKeyVault.usePodIdentity | quote }}
+    {{- with $secret.azureKeyVault.clientId }}
+    clientID: {{ . | quote }}
+    {{- end }}
+    keyvaultName: {{ required (printf "%s.azureKeyVault.keyvaultName is required when %s.type is azureKeyVault" $path $path) $secret.azureKeyVault.keyvaultName | quote }}
+    objects: |
+      array:
+        - |
+          objectName: {{ required (printf "%s.azureKeyVault.secretName is required when %s.type is azureKeyVault" $path $path) $secret.azureKeyVault.secretName | quote }}
+          objectType: secret
+          objectAlias: secrets.toml
+    tenantID: {{ required (printf "%s.azureKeyVault.tenantId is required when %s.type is azureKeyVault" $path $path) $secret.azureKeyVault.tenantId | quote }}
+    {{- end }}
   {{- end -}}
 {{- end -}}
 

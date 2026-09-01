@@ -49,8 +49,9 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 - A secrets manager:
   - The chart has first class support for [External Secrets Operator](https://external-secrets.io/),
     [GCP's Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component),
-    and [AWS Secrets Manager](https://github.com/aws/secrets-store-csi-driver-provider-aws) (via the ASCP,
-    with IRSA or EKS Pod Identity).
+    [AWS Secrets Manager](https://github.com/aws/secrets-store-csi-driver-provider-aws) (via the ASCP,
+    with IRSA or EKS Pod Identity), and [Azure Key Vault](https://azure.github.io/secrets-store-csi-driver-provider-azure/)
+    (via the Azure Key Vault provider for the Secrets Store CSI Driver, with Workload Identity or Pod Identity).
   - If you use some other secrets manager, you should instead use the "existing secret" mechanism and manage the secret
     yourself.
   - Never directly provide credentials through the chart's values. Values should be versioned in your VCS, and are no
