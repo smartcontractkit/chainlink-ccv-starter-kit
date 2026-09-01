@@ -1,8 +1,23 @@
 # ccv-cell
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.0.0](https://img.shields.io/badge/Version-0.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 Chainlink CCIP 2.0 CCV Cell deployment, including aggregator and verifier
+
+## Installation
+
+The chart is published as an OCI artifact. Install it with:
+
+```shell
+helm install my-ccv-cell oci://public.ecr.aws/chainlink/helm/ccv-cell --version <version>
+```
+
+Available versions are listed under [Releases](https://github.com/smartcontractkit/chainlink-ccv-starter-kit/releases) and
+as [git tags](https://github.com/smartcontractkit/chainlink-ccv-starter-kit/tags), without the prefix `v`.
+
+Consult the [Values](#values) section bellow, or the [`values.yaml` file](./values.yaml) to see available configuration
+options. Also check the [Requirements](#requirements) section bellow for what you need to configure beforehand.
+You may also read the [runbook](../../RUNBOOK.md) for a small guide.
 
 **Homepage:** <https://github.com/smartcontractkit/chainlink-ccv-starter-kit>
 
@@ -137,11 +152,11 @@ is compromised.
 | aggregator.httpRoute.hostnames | list | `[]` | Hostnames to match. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Treat as stable, changing it requires updating every peer and the indexer. |
 | aggregator.httpRoute.labels | object | `{}` | Labels to add to the HTTPRoute. |
 | aggregator.httpRoute.parentRefs | list | `[]` | Parent Gateway references. See [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/#api-kind-httproute).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
-| aggregator.image.digest | string | `"sha256:f4279336561689ce13a296093a832bc58ea8d01632d8658868a4df8eeaf3ce0b"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| aggregator.image.digest | string | `""` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | aggregator.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | aggregator.image.registry | string | `""` | OCI registry, overrides `global.image.registry` when set. |
 | aggregator.image.repository | string | `"chainlink/chainlink-ccv-aggregator"` | Image repository. |
-| aggregator.image.tag | string | `""` | Image tag. Mutually exclusive with `digest`. |
+| aggregator.image.tag | string | `"v0.6.0"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
 | aggregator.ingress.annotations | object | `{}` | Annotations to add to the Ingress (e.g. controller-specific TLS/HTTP2 or gRPC wiring). |
 | aggregator.ingress.className | string | `""` | Ingress class name. See [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
 | aggregator.ingress.enabled | bool | `false` | Enable an Ingress for the aggregator gRPC endpoint. |
@@ -236,11 +251,11 @@ is compromised.
 | verifier.extraInitContainers | list | `[]` | Init containers prepended to the verifier pod. See [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/). |
 | verifier.extraVolumeMounts | list | `[]` | Extra volume mounts appended to the verifier container. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
 | verifier.extraVolumes | list | `[]` | Extra volumes appended to the verifier pod. See [volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-volume-storage/). |
-| verifier.image.digest | string | `"sha256:42d1f18aafca51ccd242375cc2ae84824c9f7101c5e0fbee8d5fb43ba570c9ce"` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
+| verifier.image.digest | string | `""` | Image digest (`sha256:...`). Mutually exclusive with `tag`. |
 | verifier.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | verifier.image.registry | string | `""` | OCI registry; overrides `global.image.registry` when set. |
 | verifier.image.repository | string | `"chainlink/chainlink-ccv-verifier"` | Image repository. |
-| verifier.image.tag | string | `""` | Image tag. Mutually exclusive with `digest`. |
+| verifier.image.tag | string | `"v0.6.0"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
 | verifier.labels | object | `{}` | Labels to add to the verifier Deployment object. |
 | verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"bootstrap-info"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |

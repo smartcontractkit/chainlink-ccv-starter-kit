@@ -31,8 +31,17 @@ and fail CI!
 
 ## Chart releases
 
-Charts are released via [chart-releaser-action](https://github.com/helm/chart-releaser-action) whenever `charts/**`
-changes on `main`. Bump a chart's `version` in its `Chart.yaml` to trigger a release.
+The [`ccv-cell` helm chart](./charts/ccv-cell) is released on tag pushes that follow the `v*` pattern. The version in
+`Chart.yaml` is overridden by CI using the git tag provided.
+
+To trigger a release, simply push release tags like so:
+```shell
+newVersion=v9.8.7  # the version being released
+git switch main && \
+  git pull && \
+  git tag -a -m "Release $newVersion" "$newVersion" && \
+  git push origin "$newVersion"
+```
 
 ## Local testing
 
