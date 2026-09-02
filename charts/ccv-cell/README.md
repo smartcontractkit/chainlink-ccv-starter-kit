@@ -32,8 +32,8 @@ Kubernetes: `>= 1.19.0-0`
 ### Cluster Dependencies
 
 In your Kubernetes cluster, you'll need:
-- Some kind of Ingress or Gateway controller that supports HTTP/2 and gRPC. The Aggregator exposes a public gRPC
-  endpoint that must be accessible from the other cells.
+- Some kind of Ingress or Gateway controller that supports HTTP/2 and gRPC with TLS termination. The Aggregator exposes
+  a public gRPC endpoint that must be accessible from the other cells, and the indexer.
 - Due to the gRPC communication, you'll most likely need meshing. Both [Istio](https://istio.io/) and
   [Linkerd](https://linkerd.io/) are viable options, with Istio also being able to serve as your Gateway controller.
 
@@ -59,15 +59,18 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 - A Key Management Service (KMS) solution:
   - While the application supports holding the signing key in PostgreSQL, this is not recommended for production.
   - Instead, use a managed service for signing.
+  - **We strongly recommend that, for production, you configure alerts for unexpected use of this key. Only the ccv-cell
+    should be accessing this service.**
 - A Cloud IAM Service Account:
   - Do not pass long-lived secrets, like access keys, to the pods.
   - Instead, use your cloud's IAM offering (like AWS' EKS' IRSA or GCP's GKE's Workload Identity Federation) to provide
     credentials to pods through IAM.
   - The Service Account must provide access for the secrets and KMS described above.
 
-Note that, for security reasons, the external dependencies described above must not be shared between two deployments
-of a CCV Cell! Doing so could introduce single points of failure that make your committee vulnerable if a single cell
-is compromised.
+> [!NOTE]
+> For security reasons, the external dependencies described above must not be shared between two deployments
+> of a CCV Cell! Doing so could introduce single points of failure that make your committee vulnerable if a single cell
+> is compromised.
 
 ## Values
 
@@ -106,7 +109,7 @@ is compromised.
 | aggregator.config.monitoring.Pyroscope.Enabled | bool | `false` | Enable Pyroscope telemetry. |
 | aggregator.config.monitoring.Pyroscope.URL | string | `""` | Remote endpoint of the Pyroscope service. |
 | aggregator.config.orphanRecovery.checkAggregationTimeout | string | `"5s"` | Timeout for each check-aggregation operation. |
-| aggregator.config.orphanRecovery.enabled | bool | `false` | Enable recovery of orphaned aggregation records. |
+| aggregator.config.orphanRecovery.enabled | bool | `true` | Enable recovery of orphaned aggregation records.    This can happen if there is a pod crash mid-report build, and is recommended to be left enabled. |
 | aggregator.config.orphanRecovery.interval | string | `"5m0s"` | How often orphan recovery runs. |
 | aggregator.config.orphanRecovery.maxAge | string | `"168h0m0s"` | Maximum age of orphan records to consider for recovery. Older records are skipped. |
 | aggregator.config.orphanRecovery.maxConsecutiveErrors | int | `3` | Maximum consecutive errors before orphan recovery is considered failed. |
