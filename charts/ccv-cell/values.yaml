@@ -218,7 +218,7 @@ aggregator:
       # -- Labels to add to the aggregator app Secret.
       labels: {}
 
-      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.
       type: externalSecret
 
@@ -269,6 +269,28 @@ aggregator:
         # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
         usePodIdentity: false
 
+      # -- Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).
+      #    Requires the provider installed on the AKS cluster and either
+      #    Workload Identity or Azure AD Pod Identity configured for `aggregator.serviceAccount`.
+      #    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.
+      #    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.
+      #    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `aggregator.podLabels`.
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built `secrets.toml`.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
+        #    Leave empty when using Pod Identity (`usePodIdentity: true`).
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
   # -- Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
 
@@ -293,6 +315,8 @@ aggregator:
     #    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.
     #    For AWS IRSA (required by `aggregator.secrets.app.awsSecretStore` with `usePodIdentity: false`),
     #    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secret.
+    #    For Azure Workload Identity (required by `aggregator.secrets.app.azureKeyVault` with `usePodIdentity: false`),
+    #    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID.
     annotations: {}
     # -- Labels to add to the ServiceAccount.
     labels: {}
@@ -694,7 +718,7 @@ verifier:
       # -- Labels to add to the verifier app Secret.
       labels: {}
 
-      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.
       type: externalSecret
 
@@ -744,6 +768,28 @@ verifier:
         # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
         usePodIdentity: false
 
+      # -- Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).
+      #    Requires the provider installed on the AKS cluster and either
+      #    Workload Identity or Azure AD Pod Identity configured for `verifier.serviceAccount`.
+      #    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.
+      #    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.
+      #    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `verifier.podLabels`.
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built `secrets.toml`.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
+        #    Leave empty when using Pod Identity (`usePodIdentity: true`).
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
     bootstrap:
       # -- Annotations to add to the verifier bootstrap Secret.
       annotations: {}
@@ -759,7 +805,7 @@ verifier:
         # -- AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`).
         ed25519KeyId: ""  # "arn:aws:kms:us-east-1:...:key/def456-..."
 
-      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, or `awsSecretStore`.
+      # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.
       type: externalSecret
 
@@ -813,6 +859,28 @@ verifier:
         # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
         usePodIdentity: false
 
+      # -- Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).
+      #    Requires the provider installed on the AKS cluster and either
+      #    Workload Identity or Azure AD Pod Identity configured for `verifier.serviceAccount`.
+      #    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.
+      #    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.
+      #    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `verifier.podLabels`.
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built `secrets.toml`.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
+        #    Leave empty when using Pod Identity (`usePodIdentity: true`).
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
     evm:
       # -- Annotations to add to the verifier evm Secret.
       annotations: {}
@@ -820,8 +888,8 @@ verifier:
       labels: {}
 
       # -- Provisioning strategy: the default, `values`, uses .verifier.evm.config to render this as a simple ConfigMap.
-      #    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`, or
-      #    `awsSecretStore` to configure this as a secret instead.
+      #    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`,
+      #    `awsSecretStore`, or `azureKeyVault` to configure this as a secret instead.
       type: values
 
       existingSecret:
@@ -866,6 +934,28 @@ verifier:
         # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
         usePodIdentity: false
 
+      # -- Azure Key Vault, mounted via the [Azure Key Vault provider for the Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/).
+      #    Requires the provider installed on the AKS cluster and either
+      #    Workload Identity or Azure AD Pod Identity configured for `verifier.serviceAccount`.
+      #    For Workload Identity: annotate the ServiceAccount with `azure.workload.identity/client-id` and set `clientId` below.
+      #    For Pod Identity: create an AzureIdentityBinding and set `usePodIdentity: true`.
+      #    Note: Workload Identity also requires the `azure.workload.identity/use: "true"` pod label, set via `verifier.podLabels`.
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built `secrets.toml`.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
+        #    Leave empty when using Pod Identity (`usePodIdentity: true`).
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
   # -- Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
 
@@ -891,6 +981,8 @@ verifier:
     #    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.
     #    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),
     #    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets.
+    #    For Azure Workload Identity (required by `verifier.secrets.*.azureKeyVault` with `usePodIdentity: false`),
+    #    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID.
     annotations: {}
     # -- Labels to add to the ServiceAccount.
     labels: {}
