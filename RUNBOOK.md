@@ -68,7 +68,7 @@ verifier:
     aggregators:
       - name: aggregator-1
         secret_name: aggregator_1
-        useInClusterAggregator: true  
+        useInClusterAggregator: true
     committee_verifier_addresses:
       "1": "0x00000000000000000000000000000000000000c1"
     on_ramp_addresses:
@@ -104,7 +104,7 @@ many ccv-cells deployments.
 
 ### Secrets
 
-To configure the application secrets, 
+To configure the application secrets,
 Set `type` on each of `aggregator.secrets.app`, `verifier.secrets.app`, `verifier.secrets.bootstrap`
 (and optionally `verifier.secrets.evm`):
 
@@ -310,7 +310,7 @@ Because this can get complicated, we recommend the following:
   - If you deploy one cell per region, that may be a reasonable suffix: `ccv-cell-use1`, `ccv-cell-euw2`, etc.
 - Keep hostnames consistent with aggregator names: if you deploy a cell named `ccv-cell-potato` and `ccv-cell-banana`,
   consider hostnames like `aggregator-potato.example.com` and `aggregator-banana.example.com`.
-  - Consider the hostname carefully. **Changing it requires updating it in all peers and the indexer**! 
+  - Consider the hostname carefully. **Changing it requires updating it in all peers and the indexer**!
 - In each cell, references to any other aggregator or verifier can have arbitrary names. We recommend you also keep
   these names consistent across cells, for ease of identification.
 
@@ -390,3 +390,95 @@ verifier:
 > The `x-*` top-level keys are completely ignored by Helm, they exist only to hold anchors. You can change the structure,
 > anchors and values as you see fit without affecting the rest of the chart. If you want to see the end result, try
 > `helm template` or `yq 'explode(.)' your-values.yaml`.
+
+## 9. Metrics: deploy an OTel Collector
+
+Both the aggregator and the verifier export metrics over OTLP via Beholder: `aggregator.config.monitoring.Beholder` ·
+`verifier.bootstrap.config.Monitoring.Beholder`.
+
+> [!NOTE]
+> If you don't already have an OTel collector running in your cluster, deploy one first, see below. If you already
+> have one accepting OTLP, skip ahead to [Point ccv-cell at it](#point-ccv-cell-at-it).
+
+### Deploy a collector
+
+Pick one. Both accept OTLP gRPC (`4317`) and HTTP (`4318`) out of the box:
+
+- **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** (upstream, vendor-agnostic):
+  ```bash
+  helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+  helm install otel-collector open-telemetry/opentelemetry-collector -n monitoring --create-namespace \
+    --set mode=deployment --set image.repository="otel/opentelemetry-collector-contrib"
+  ```
+- **[Grafana Alloy](https://grafana.com/docs/alloy/latest/)** (vendor-neutral OTel distribution, Grafana's own
+  agent):
+  ```bash
+  helm repo add grafana https://grafana.github.io/helm-charts
+  helm install alloy grafana/alloy -n monitoring --create-namespace
+  ```
+
+Either way, the collector needs a pipeline turning received OTLP metrics into something your metrics backend can
+ingest. Minimal working example, in Alloy config:
+
+```alloy
+otelcol.receiver.otlp "ccv_cell" {
+  grpc { endpoint = "0.0.0.0:4317" }
+  http { endpoint = "0.0.0.0:4318" }
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+  }
+}
+
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "https://<your-metrics-backend>/api/v1/write"
+  }
+}
+```
+
+The OTel Collector equivalent is the same shape (`otlp` receiver → `prometheusremotewrite` exporter). See the
+[configuration docs](https://opentelemetry.io/docs/collector/configuration/) for exact syntax.
+
+> [!NOTE]
+> Nothing here is prescriptive. The collector, the metrics backend it forwards to (Prometheus, Mimir, Grafana Cloud,
+> Datadog, ...), and how you eventually visualize the data are all just examples. Use whatever your organization
+> already runs.
+
+### Point ccv-cell at it
+
+Set only one of `OtelExporterGRPCEndpoint`/`OtelExporterHTTPEndpoint`, pick whichever protocol your
+collector pipeline above is set up to receive on.
+
+```yaml
+aggregator:
+  config:
+    monitoring:
+      Beholder:
+        Enabled: true
+        InsecureConnection: true # unless you terminate TLS in front of the collector
+        OtelExporterGRPCEndpoint: "<collector-service>.<namespace>.svc.cluster.local:4317"
+  env:
+    - name: OTEL_SERVICE_NAME
+      value: my-cell-aggregator # otherwise reports as unknown_service:aggregator
+
+verifier:
+  bootstrap:
+    config:
+      Monitoring:
+        Beholder:
+          Enabled: true
+          InsecureConnection: true
+          OtelExporterGRPCEndpoint: "<collector-service>.<namespace>.svc.cluster.local:4317"
+  env:
+    - name: OTEL_SERVICE_NAME
+      value: my-cell-verifier
+```
+
+Full field reference: the `Beholder` block in the config docs linked under [Prerequisites](#1-prerequisites).
+`OTEL_SERVICE_NAME` is the standard OTel env var for naming a service; it's confirmed to work on both the aggregator
+and the verifier.
