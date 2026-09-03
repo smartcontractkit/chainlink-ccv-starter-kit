@@ -578,6 +578,23 @@ verifier:
     rmn_remote_addresses: {}
     # "1": "0x00000000000000000000000000000000000000b1"
 
+    # -- Optional custom policy endpoint consulted as the final gate before signing.
+    #    Absent by default; the verifier behaves as if this section does not exist when omitted.
+    #    You can deploy these as sidecars (see verifier.extraContainers), but more likely you'll want a separate
+    #    deployment entirely.
+    #    See https://github.com/smartcontractkit/chainlink-ccv/blob/main/verifier/docs/policy_hook.md for more info
+    # policy_hook:
+    #   # Root URL the verifier POSTs to (`base_url + "/v1/evaluate"`). Must be https unless `insecure_connection` is set.
+    #   base_url: "https://policy.example.com"
+    #   # Timeout for a single call to the endpoint, as a Go duration string. Empty uses the 5s default (15s max).
+    #   request_timeout: "5s"
+    #   # Wait between retries after an endpoint error, as a Go duration string. Jittered 0.5x-1.5x. Empty uses 10s.
+    #   retry_delay: "10s"
+    #   # Allow a plain http:// endpoint. For local/test use only.
+    #   insecure_connection: false
+    #   # Make a missing endpoint credential fatal at startup instead of calling unauthenticated.
+    #   require_auth: false
+
   bootstrap:
     # This tree is rendered into `bootstrap-config.toml` with `toToml` (see templates/verifier/configmap.yaml).
     config:
@@ -861,6 +878,7 @@ verifier:
   #   image: busybox
 
   # -- Sidecar containers appended to the verifier pod. See [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates).
+  #    You can use these as a means of deploying policy hooks, but most of the time you'll want a separate deployment.
   extraContainers: []
   # - name: sidecar
   #   image: busybox
