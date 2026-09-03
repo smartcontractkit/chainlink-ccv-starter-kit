@@ -205,6 +205,24 @@ Service accounts are used by your cloud to allow access from the pods to Secrets
 Configuring these properly, including name and namespace on the cloud IAM's side, is critical for production use.
 Check the comments and your cloud's documentation for more.
 
+### Policy Hooks
+
+The Verifier supports [policy hooks](https://github.com/smartcontractkit/chainlink-ccv/blob/main/verifier/docs/policy_hook.md).
+While you can deploy these as part of the chart, using extra containers:
+```yaml
+verifier:
+  config:
+    policy_hook:
+      base_url: "http://localhost:1234"
+      insecure_connection: true
+    extraContainers:
+      - name: my-policy-hook
+        image: my-policy-hook:v1.2.3
+```
+
+We recommend a separate deployment/helm install entirely, so you have extra control over the scaling and configuration
+of the running container. See the main documentation for more details.
+
 ## 3. Deploy
 
 Once you have the values above, you just need to follow standard helm install procedures.
