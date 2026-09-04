@@ -669,17 +669,17 @@ committee-wide issue).
 
 For the alerts, "page" means wake someone up _now_, while "ticket" means it can wait for business hours. Both use the metrics and thresholds from [Monitoring the cell](#10-monitoring-the-cell).
 
-| Alert | Condition | Severity | Why |
-|---|---|---|---|
-| Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Page | That verifier stopped reporting. |
-| Global curse active | `verifier_local_chain_global_cursed > 0` | Page | Hard stop, not a warning. |
-| Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). |
-| KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. |
-| Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. |
-| Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Ticket | Investigate source RPC health. |
-| Verification or storage queue growing | sustained growth in `verifier_task_verification_queue_size` / `verifier_storage_write_queue_size` | Ticket | Capacity issue, not yet an outage. |
-| Aggregator errors nonzero | `rate(aggregator_storage_errors_total[5m]) > 0` or `rate(aggregator_grpc_errors_total[5m]) > 0` | Ticket | Should sit at ~0; investigate the trend. |
-| Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Aggregator is working off stale rules. |
+| Alert | Condition | Severity | Why | First action |
+|---|---|---|---|---|
+| Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Page | That verifier stopped reporting. | ["Confirm Verifier Liveness"](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md#1-confirm-verifier-liveness) |
+| Global curse active | `verifier_local_chain_global_cursed > 0` | Page | Hard stop, not a warning. | Usually an [RMN circuit breaker](https://docs.chain.link/ccip/concepts/architecture/offchain/risk-management-network), not a ccv-cell bug. Confirm on the [RMNRemote contract](https://docs.chain.link/ccip/concepts/architecture/onchain/evm/components#rmn-contract) (address is your own `rmn_remote_addresses` config), then escalate to your network operators. |
+| Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). | See the ["unverified after 15 minutes" runbook](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md). |
+| KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. | Revoke/rotate the key, then investigate the caller. |
+| Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. | - |
+| Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Ticket | Investigate source RPC health. | - |
+| Verification or storage queue growing | sustained growth in `verifier_task_verification_queue_size` / `verifier_storage_write_queue_size` | Ticket | Capacity issue, not yet an outage. | - |
+| Aggregator errors nonzero | `rate(aggregator_storage_errors_total[5m]) > 0` or `rate(aggregator_grpc_errors_total[5m]) > 0` | Ticket | Should sit at ~0; investigate the trend. | - |
+| Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Aggregator is working off stale rules. | - |
 
 ### AlertManager rules
 
@@ -769,5 +769,5 @@ If you're building SLOs on top of these metrics, three starting points:
 - **Correctness**: aggregator error rate (`aggregator_storage_errors_total` + `aggregator_grpc_errors_total`) staying
   at zero.
 
-Actual SLO targets are a business decision for the operator to make, not something this guide can set for you.
+Actual SLO targets are your own business decision, not something this guide can set for you.
 
