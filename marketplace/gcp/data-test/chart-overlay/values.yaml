@@ -22,7 +22,7 @@ ccv-cell:
             sourceVerifierAddress: "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
             threshold: 1
             signers:
-              - address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+              - address: "0x0000000000000000000000000000000000000001"
         destinationVerifiers:
           "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
       clients:
@@ -37,23 +37,8 @@ ccv-cell:
           key: secrets.toml
 
   verifier:
-    bootstrap:
-      config:
-        key_import:
-          path: /etc/ccv/migration/key.json
-          password_path: /etc/ccv/migration/export-password.txt
-          expected_id: "0x072cdf41f8814e23a3856591645b639f9c71de83"
-    extraVolumes:
-      - name: key-import
-        secret:
-          secretName: verify-verifier-key-import
-    extraVolumeMounts:
-      - name: key-import
-        mountPath: /etc/ccv/migration
-        readOnly: true
     config:
       verifier_id: "committee-verifier-1"
-      signer_address: "0x072cdf41f8814e23a3856591645b639f9c71de83"
       aggregators:
         - name: aggregator-1
           secret_name: aggregator_1
