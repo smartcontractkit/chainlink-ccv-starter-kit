@@ -141,6 +141,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.config.storage.type | string | `"postgres"` | Storage backend. Only `postgres` is supported. |
 | aggregator.configMap.annotations | object | `{}` | Annotations to add to the aggregator ConfigMap. |
 | aggregator.configMap.labels | object | `{}` | Labels to add to the aggregator ConfigMap. |
+| aggregator.containerSecurityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}` | Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
 | aggregator.enabled | bool | `true` | Enable the aggregator component. |
 | aggregator.env | list | `[]` | Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | aggregator.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the aggregator container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
@@ -259,6 +260,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.config.verifier_id | string | `""` | Unique identifier for this committee verifier instance. Set a different value for each verifier    in the committee. |
 | verifier.configMap.annotations | object | `{}` | Annotations to add to the verifier ConfigMap. |
 | verifier.configMap.labels | object | `{}` | Labels to add to the verifier ConfigMap. |
+| verifier.containerSecurityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}` | Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |

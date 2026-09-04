@@ -64,6 +64,8 @@ spec:
           lifecycle:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          securityContext:
+            {{- toYaml .Values.aggregator.containerSecurityContext | nindent 12 }}
           env:
             - name: AGGREGATOR_CONFIG_PATH
               value: /etc/config.toml

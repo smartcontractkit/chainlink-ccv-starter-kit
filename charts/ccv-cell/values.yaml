@@ -522,6 +522,13 @@ aggregator:
     seccompProfile:
       type: RuntimeDefault
 
+  # -- Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
   # -- Share a single process namespace across all containers in the pod. See [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/).
   shareProcessNamespace: false
 
@@ -1108,6 +1115,13 @@ verifier:
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
+
+  # -- Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 
   # -- Share a single process namespace across all containers in the pod. See [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/).
   shareProcessNamespace: false
