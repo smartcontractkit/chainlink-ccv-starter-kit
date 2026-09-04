@@ -37,6 +37,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      automountServiceAccountToken: {{ .Values.verifier.serviceAccount.automountServiceAccountToken }}
       securityContext:
         {{- toYaml .Values.verifier.podSecurityContext | nindent 8 }}
       shareProcessNamespace: {{ .Values.verifier.shareProcessNamespace }}
