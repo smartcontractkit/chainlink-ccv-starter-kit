@@ -257,7 +257,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.config.on_ramp_addresses | object | `{}` | Addresses of the on-ramps, one per chain selector. Paired with `committee_verifier_addresses`    above — see that field.    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.config.pyroscope_url | string | `""` | Pyroscope server URL for continuous profiling. An empty value disables it. |
 | verifier.config.rmn_remote_addresses | object | `{}` | Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection.    Note: the map keys must be strings, wrapped in quotes. |
-| verifier.config.signer_address | string | `""` | On-chain address of this verifier's result-signing key. Set a different value for each verifier. |
+| verifier.config.signer_address | string | `"auto"` | On-chain address of this verifier's result-signing key. Each verifier will have a different address.    The default, "auto", infers the address from the key. You can see the resulting address in the startup logs    or the bootstrap info endpoint: /keystore/reader/getaddresses, to use it in the Aggregator's committee, or to    pass to other cells. |
 | verifier.config.verifier_id | string | `""` | Unique identifier for this committee verifier instance. Set a different value for each verifier    in the committee. |
 | verifier.configMap.annotations | object | `{}` | Annotations to add to the verifier ConfigMap. |
 | verifier.configMap.labels | object | `{}` | Labels to add to the verifier ConfigMap. |

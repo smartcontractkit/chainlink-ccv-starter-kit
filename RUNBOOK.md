@@ -52,6 +52,7 @@ aggregator:
           sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
           threshold: 1
           signers:
+            # Your first signer will be your own address, see bellow
             - address: "0x00000000000000000000000000000000000000b1"
       destinationVerifiers:
         "2": "0x00000000000000000000000000000000000000c2"
@@ -64,7 +65,7 @@ aggregator:
 verifier:
   config:
     verifier_id: "committee-verifier-1"
-    signer_address: "0x00000000000000000000000000000000000000b1"
+    signer_address: "auto"  # See bellow how to find this address for use above
     aggregators:
       - name: aggregator-1
         secret_name: aggregator_1
@@ -101,6 +102,63 @@ for more info as you go.
 
 Keep reading until the end of this guide for some tips and tricks on committee size, and how to organize values for
 many ccv-cells deployments.
+
+### Signer Address
+
+The `signer_address` for your verifier will be used by the aggregator and other cells from the same committee. By
+default, the verifier can infer its own address for bootstrapping, but you must find this information to finish
+configuring the aggregator and other cells. Here are a few ways how:
+
+1. **Verifier logs**  
+   During startup, the verifier pods emits as a log the address. After the first deploy, search for `Using signer address`
+   in the logs. With kubectl, it will look like this:
+   ```shell
+   kubectl -n "$NAMESPACE" logs ccv-cell-verifier-0 | grep "Using signer address" | jq -r .address
+   # 0x1234567890abcdef9876543210fedcba01234567
+   ```
+   Your cluster probably has other log collection mechanisms available, contact your administrator if you are not
+   sure.
+
+2. **Bootstrap info endpoint**  
+   The verifier pod has a bootstrap info server that is not publicly exposed by default. It can give you the signer
+   address pre-calculated if you can port-forward:
+   ```shell
+   # In one terminal:
+   kc port-forward ccv-cell-verifier-0 9988
+   # Forwarding from 127.0.0.1:9988 -> 9988
+   # Forwarding from [::1]:9988 -> 9988
+ 
+   # In another
+   curl -sSf -X POST http://localhost:9988/keystore/reader/getaddresses \
+     -d '{"keyNames":["bootstrap_default_ecdsa_signing_key"]}' | jq -r .bootstrap_default_ecdsa_signing_key
+   # 0x1234567890abcdef9876543210fedcba01234567
+   ```
+
+3. **Calculate it yourself from the public key**  
+   If you have the public key in a file `public.pem`, a small Python script, using the [cryptography
+   ](https://pypi.org/project/cryptography/) library, will give you the address:
+   ```py
+   import sys
+   from cryptography.hazmat.primitives.serialization import load_pem_public_key
+   from Crypto.Hash import keccak
+   
+   path = "public.pem"
+   
+   with open(path, "rb") as f:
+       pub = load_pem_public_key(f.read())
+   
+   n = pub.public_numbers()
+   point = n.x.to_bytes(32, "big") + n.y.to_bytes(32, "big")
+   
+   h = keccak.new(digest_bits=256)
+   h.update(point)
+   print("0x" + h.digest()[-20:].hex())
+   # 0x1234567890abcdef9876543210fedcba01234567
+   ```
+   Most managed KMS solutions allow you fetch the public key, consult your cloud's documentation. 
+
+After fetching your address, you can use in the aggregator's committee configs. You can also replace the verifier's own
+`signer_address` setting, but it's not necessary.
 
 ### Secrets
 
@@ -397,7 +455,7 @@ aggregator:
 
 verifier:
   config:
-    signer_address: *verifier-0
+    signer_address: auto
     committee_verifier_addresses:
       *sepolia: *resolver
       *fuji:    *resolver

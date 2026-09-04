@@ -566,8 +566,11 @@ verifier:
     #    integration default.
     message_disablement_rules_client_timeout: "500ms"
 
-    # -- On-chain address of this verifier's result-signing key. Set a different value for each verifier.
-    signer_address: ""
+    # -- On-chain address of this verifier's result-signing key. Each verifier will have a different address.
+    #    The default, "auto", infers the address from the key. You can see the resulting address in the startup logs
+    #    or the bootstrap info endpoint: /keystore/reader/getaddresses, to use it in the Aggregator's committee, or to
+    #    pass to other cells.
+    signer_address: "auto"
 
     # -- Pyroscope server URL for continuous profiling. An empty value disables it.
     pyroscope_url: ""
