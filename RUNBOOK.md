@@ -20,6 +20,7 @@ cells form a **committee**; each cell's Postgres/secrets/KMS isolation requireme
 - [8. Peer information and credential exchange](#8-peer-information-and-credential-exchange)
 - [9. Metrics: deploy an OTel Collector](#9-metrics-deploy-an-otel-collector)
 - [10. Monitoring the cell](#10-monitoring-the-cell)
+- [11. Alerting](#11-alerting)
 
 ## 1. Prerequisites
 
@@ -657,4 +658,116 @@ It's laid out in the same six groups as the metric tables above: **Liveness**, *
 Pipeline & Finality Backlog**, **Verification & Storage Internals**, **Aggregator**, and **Incident Scope** (a
 top-10-oldest-pending-messages table, the fastest way to tell one stuck message apart from a lane-wide or
 committee-wide issue).
+
+## 11. Alerting
+
+> [!NOTE]
+> This is a reference implementation, not a managed service. You run your own on-call, your own AlertManager (or
+> equivalent), and your own paging tool. Adjust routing, receivers, and even which alerts fire, to your own setup.
+
+### Alert catalog: page or ticket
+
+For the alerts, "page" means wake someone up _now_, while "ticket" means it can wait for business hours. Both use the metrics and thresholds from [Monitoring the cell](#10-monitoring-the-cell).
+
+| Alert | Condition | Severity | Why |
+|---|---|---|---|
+| Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Page | That verifier stopped reporting. |
+| Global curse active | `verifier_local_chain_global_cursed > 0` | Page | Hard stop, not a warning. |
+| Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). |
+| KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. |
+| Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. |
+| Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Ticket | Investigate source RPC health. |
+| Verification or storage queue growing | sustained growth in `verifier_task_verification_queue_size` / `verifier_storage_write_queue_size` | Ticket | Capacity issue, not yet an outage. |
+| Aggregator errors nonzero | `rate(aggregator_storage_errors_total[5m]) > 0` or `rate(aggregator_grpc_errors_total[5m]) > 0` | Ticket | Should sit at ~0; investigate the trend. |
+| Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Aggregator is working off stale rules. |
+
+### AlertManager rules
+
+Samples, matching the alert catalog above. Adjust names, `for:` durations, and thresholds to your own traffic.
+
+```yaml
+groups:
+  - name: ccv-cell
+    rules:
+      - alert: CCVVerifierHeartbeatStale
+        expr: time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "Verifier {{ $labels.caller_id }} hasn't sent a heartbeat in over 5 minutes"
+
+      - alert: CCVGlobalCurse
+        expr: verifier_local_chain_global_cursed > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "A chain is globally cursed"
+
+      - alert: CCVMessageStuck
+        expr: verifier_oldest_message_age_seconds{state="pending_finality"} > 900
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "A message on {{ $labels.source_chain_name }} -> {{ $labels.dest_chain_name }} has been pending finality for over 15 minutes"
+
+      - alert: CCVHeartbeatScoreDegraded
+        expr: min by (verifier_id) (verifier_heartbeat_score) > 2
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Verifier {{ $labels.verifier_id }} is lagging its committee"
+
+      - alert: CCVSourceReaderPollError
+        expr: verifier_source_reader_state{state="poll_error"} == 1
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Source reader for {{ $labels.source_chain_name }} can't poll"
+
+      - alert: CCVAggregatorErrors
+        expr: rate(aggregator_storage_errors_total[5m]) > 0 or rate(aggregator_grpc_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Aggregator is emitting storage or gRPC errors"
+```
+
+### AlertManager routing
+
+Route by the `severity` label above (`page` vs `ticket`) to your own on-call tool and ticketing system. See
+AlertManager's own [routing](https://prometheus.io/docs/alerting/latest/configuration/#route) and
+[receiver](https://prometheus.io/docs/alerting/latest/configuration/#receiver) docs for exact syntax.
+
+### Key misuse (KMS)
+
+> [!WARNING]
+> Only the verifier should ever use its signing KMS key. Alert on any other use, immediately.
+
+`verifier.secrets.bootstrap.kms.ecdsaKeyId` (see [Secrets](#secrets)) holds the verifier's result-signing key. Anyone
+else who can call `Sign` with it can forge signed results as that verifier. This is covered by your cloud's audit log,
+not the ccv-cell's own metrics. Set up an alert matching any use of that key by a principal other than the verifier's own identity, using your cloud's own guide.
+
+- **AWS**: [Logging AWS KMS API calls with AWS CloudTrail](https://docs.aws.amazon.com/kms/latest/developerguide/logging-using-cloudtrail.html)
+- **GCP**: [Audit logging for Cloud KMS](https://cloud.google.com/kms/docs/audit-logging)
+- **Azure**: [Monitor Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/monitor-key-vault)
+
+Either way, page immediately: it's a signal that a signing key may be compromised.
+
+### SLIs and SLOs
+
+If you're building SLOs on top of these metrics, three starting points:
+
+- **Availability**: percentage of time each verifier's heartbeat is fresh (under 60s).
+- **Latency**: percentage of messages verified within your own attestation latency budget, from
+  `verifier_message_e2e_latency_seconds`.
+- **Correctness**: aggregator error rate (`aggregator_storage_errors_total` + `aggregator_grpc_errors_total`) staying
+  at zero.
+
+Actual SLO targets are a business decision for the operator to make, not something this guide can set for you.
 
