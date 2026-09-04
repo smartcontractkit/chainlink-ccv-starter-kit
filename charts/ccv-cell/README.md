@@ -141,6 +141,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.config.storage.type | string | `"postgres"` | Storage backend. Only `postgres` is supported. |
 | aggregator.configMap.annotations | object | `{}` | Annotations to add to the aggregator ConfigMap. |
 | aggregator.configMap.labels | object | `{}` | Labels to add to the aggregator ConfigMap. |
+| aggregator.containerSecurityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}` | Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
 | aggregator.enabled | bool | `true` | Enable the aggregator component. |
 | aggregator.env | list | `[]` | Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | aggregator.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the aggregator container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
@@ -214,6 +215,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.service.ports.health | int | `8080` | Port for the health endpoint. |
 | aggregator.service.type | string | `"ClusterIP"` | Service type. See [Service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
 | aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `aggregator.secrets.app.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secret.    For Azure Workload Identity (required by `aggregator.secrets.app.azureKeyVault` with `usePodIdentity: false`),    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID. |
+| aggregator.serviceAccount.automountServiceAccountToken | bool | `false` | Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).    By default, not needed, since this application doesn't use the Kuberentes API. |
 | aggregator.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the aggregator. |
 | aggregator.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | aggregator.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |
@@ -230,7 +232,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.args | list | `[]` | Arguments passed to the container entrypoint. See [args](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/). |
 | verifier.bootstrap.config.Monitoring.Beholder.CACertFile | string | `""` | Path to the CA certificate file for the Beholder client. |
 | verifier.bootstrap.config.Monitoring.Beholder.Enabled | bool | `false` | Enable Beholder telemetry. |
-| verifier.bootstrap.config.Monitoring.Beholder.InsecureConnection | bool | `true` | Disable TLS for the Beholder client. |
+| verifier.bootstrap.config.Monitoring.Beholder.InsecureConnection | bool | `false` | Disable TLS for the Beholder client. |
 | verifier.bootstrap.config.Monitoring.Beholder.LogStreamingEnabled | bool | `false` | Enable log streaming to the collector. |
 | verifier.bootstrap.config.Monitoring.Beholder.LogStreamingLevel | string | `"info"` | Minimum log level to stream to Beholder. |
 | verifier.bootstrap.config.Monitoring.Beholder.MetricReaderInterval | int | `60` | Interval to scrape metrics, in seconds. |
@@ -259,6 +261,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.config.verifier_id | string | `""` | Unique identifier for this committee verifier instance. Set a different value for each verifier    in the committee. |
 | verifier.configMap.annotations | object | `{}` | Annotations to add to the verifier ConfigMap. |
 | verifier.configMap.labels | object | `{}` | Labels to add to the verifier ConfigMap. |
+| verifier.containerSecurityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}` | Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/). |
 | verifier.enabled | bool | `true` | Enable the verifier component. |
 | verifier.env | list | `[]` | Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
 | verifier.envFrom | list | `[]` | Extra envFrom sources (ConfigMaps / Secrets) for the verifier container. See [envFrom](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/). |
@@ -359,6 +362,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.secrets.evm.labels | object | `{}` | Labels to add to the verifier evm Secret. |
 | verifier.secrets.evm.type | string | `"values"` | Provisioning strategy: the default, `values`, uses .verifier.evm.config to render this as a simple ConfigMap.    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`,    `awsSecretStore`, or `azureKeyVault` to configure this as a secret instead. |
 | verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets.    For Azure Workload Identity (required by `verifier.secrets.*.azureKeyVault` with `usePodIdentity: false`),    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID. |
+| verifier.serviceAccount.automountServiceAccountToken | bool | `false` | Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).    By default, not needed, since this application doesn't use the Kuberentes API. |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | verifier.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |

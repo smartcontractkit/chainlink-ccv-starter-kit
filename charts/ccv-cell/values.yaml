@@ -336,6 +336,9 @@ aggregator:
     labels: {}
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
     name: ""
+    # -- Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).
+    #    By default, not needed, since this application doesn't use the Kuberentes API.
+    automountServiceAccountToken: false
 
   # -- Annotations to add to the aggregator Deployment object.
   annotations: {}
@@ -522,6 +525,13 @@ aggregator:
     seccompProfile:
       type: RuntimeDefault
 
+  # -- Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
   # -- Share a single process namespace across all containers in the pod. See [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/).
   shareProcessNamespace: false
 
@@ -670,7 +680,7 @@ verifier:
           # -- Enable Beholder telemetry.
           Enabled: false
           # -- Disable TLS for the Beholder client.
-          InsecureConnection: true
+          InsecureConnection: false
           # -- Path to the CA certificate file for the Beholder client.
           CACertFile: ""
           # -- gRPC endpoint for the Beholder client to send data to the collector.
@@ -1016,6 +1026,9 @@ verifier:
     labels: {}
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
     name: ""
+    # -- Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).
+    #    By default, not needed, since this application doesn't use the Kuberentes API.
+    automountServiceAccountToken: false
 
   # -- Annotations to add to the verifier Deployment object.
   annotations: {}
@@ -1108,6 +1121,13 @@ verifier:
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
+
+  # -- Security context applied at the container level. See [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 
   # -- Share a single process namespace across all containers in the pod. See [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/).
   shareProcessNamespace: false

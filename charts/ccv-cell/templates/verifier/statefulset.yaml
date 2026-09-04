@@ -37,6 +37,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      automountServiceAccountToken: {{ .Values.verifier.serviceAccount.automountServiceAccountToken }}
       securityContext:
         {{- toYaml .Values.verifier.podSecurityContext | nindent 8 }}
       shareProcessNamespace: {{ .Values.verifier.shareProcessNamespace }}
@@ -64,6 +65,8 @@ spec:
           lifecycle:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          securityContext:
+            {{- toYaml .Values.verifier.containerSecurityContext | nindent 12 }}
           env:
             - name: BOOTSTRAPPER_CONFIG_PATH
               value: /etc/config.toml
