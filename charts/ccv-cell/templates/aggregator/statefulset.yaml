@@ -52,6 +52,18 @@ spec:
         - name: aggregator
           image: {{ include "ccv-cell.image" (dict "root" . "component" "aggregator") | quote }}
           imagePullPolicy: {{ .Values.aggregator.image.pullPolicy }}
+          {{- with .Values.aggregator.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.aggregator.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.aggregator.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           env:
             - name: AGGREGATOR_CONFIG_PATH
               value: /etc/config.toml

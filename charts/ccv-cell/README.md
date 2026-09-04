@@ -79,6 +79,8 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 |-----|------|---------|-------------|
 | aggregator.affinity | object | `{}` | Affinity rules for pod scheduling. See [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). |
 | aggregator.annotations | object | `{}` | Annotations to add to the aggregator Deployment object. |
+| aggregator.args | list | `[]` | Arguments passed to the container entrypoint. See [args](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/). |
+| aggregator.command | list | `[]` | Override the container entrypoint. See [command](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/). |
 | aggregator.config.aggregation.backgroundWorkerCount | int | `10` | Number of background workers processing aggregation requests. |
 | aggregator.config.aggregation.channelBufferSize | int | `200` | Buffer size of the aggregation request channel. |
 | aggregator.config.aggregation.drainTimeout | string | `"10s"` | How long shutdown waits for in-flight aggregation workers before proceeding anyway. |
@@ -169,6 +171,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.ingress.tls.enabled | bool | `false` | Enable TLS for the Ingress. |
 | aggregator.ingress.tls.secretName | string | `""` | Name of the TLS Secret. |
 | aggregator.labels | object | `{}` | Labels to add to the aggregator Deployment object. |
+| aggregator.lifecycle | object | `{}` | Container lifecycle hooks (postStart / preStop). See [lifecycle](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/). |
 | aggregator.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health/live","port":"health"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the aggregator container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | aggregator.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |
 | aggregator.networkPolicy.enabled | bool | `false` | Enable a NetworkPolicy for the aggregator. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
@@ -224,6 +227,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | nameOverride | string | `""` | Override the chart name used in resource names. |
 | verifier.affinity | object | `{}` | Affinity rules for pod scheduling. See [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). |
 | verifier.annotations | object | `{}` | Annotations to add to the verifier Deployment object. |
+| verifier.args | list | `[]` | Arguments passed to the container entrypoint. See [args](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/). |
 | verifier.bootstrap.config.Monitoring.Beholder.CACertFile | string | `""` | Path to the CA certificate file for the Beholder client. |
 | verifier.bootstrap.config.Monitoring.Beholder.Enabled | bool | `false` | Enable Beholder telemetry. |
 | verifier.bootstrap.config.Monitoring.Beholder.InsecureConnection | bool | `true` | Disable TLS for the Beholder client. |
@@ -241,6 +245,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.bootstrap.config.chains | list | `[]` | List of chains where this node has a signing identity. |
 | verifier.bootstrap.config.local_app_config_path | string | `"/etc/committee-verifier/config.toml"` | Path to the verifier config file for local mode. This file holds the verifier config,    not the bootstrap config. |
 | verifier.bootstrap.config.server.listen_port | int | `9988` | Port for the bootstrap HTTP server. |
+| verifier.command | list | `[]` | Override the container entrypoint. See [command](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/). |
 | verifier.config.aggregators | list | `[]` | Aggregators that this verifier writes to.    Set `useInClusterAggregator: true` to use the aggregator this chart release deploys, or set    `address` for any other aggregator. `api_key` must be a UUID, `secret_key` must    be hex-encoded, matching the target aggregator's config for this client. |
 | verifier.config.committee_verifier_addresses | object | `{}` | Addresses of the committee verifiers, one per chain selector. Paired with `on_ramp_addresses`:    at least one chain needs both, or the verifier fails to start ("no enabled/initialized chain    sources").    Note: the map keys must be strings, wrapped in quotes. |
 | verifier.config.default_executor_on_ramp_addresses | object | `{}` | Addresses of the default executor on-ramps, one per chain selector. Messages naming the default    executor are verified even if they don't name this committee verifier.    Note: the map keys must be strings, wrapped in quotes. |
@@ -268,6 +273,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.image.repository | string | `"chainlink/chainlink-ccv-verifier"` | Image repository. |
 | verifier.image.tag | string | `"v0.8.0"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
 | verifier.labels | object | `{}` | Labels to add to the verifier Deployment object. |
+| verifier.lifecycle | object | `{}` | Container lifecycle hooks (postStart / preStop). See [lifecycle](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/). |
 | verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"bootstrap-info"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
 | verifier.networkPolicy.annotations | object | `{}` | Annotations to add to the NetworkPolicy. |
 | verifier.networkPolicy.enabled | bool | `false` | Enable a NetworkPolicy for the verifier. See [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). |
