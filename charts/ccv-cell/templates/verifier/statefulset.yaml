@@ -52,6 +52,18 @@ spec:
         - name: verifier
           image: {{ include "ccv-cell.image" (dict "root" . "component" "verifier") | quote }}
           imagePullPolicy: {{ .Values.verifier.image.pullPolicy }}
+          {{- with .Values.verifier.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.verifier.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.verifier.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           env:
             - name: BOOTSTRAPPER_CONFIG_PATH
               value: /etc/config.toml

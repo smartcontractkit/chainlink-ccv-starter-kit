@@ -291,6 +291,20 @@ aggregator:
         # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
         usePodIdentity: false
 
+  # -- Override the container entrypoint. See [command](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/).
+  command: []
+  # - /bin/aggregator
+
+  # -- Arguments passed to the container entrypoint. See [args](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/).
+  args: []
+  # - --config=/etc/config.toml
+
+  # -- Container lifecycle hooks (postStart / preStop). See [lifecycle](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/).
+  lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "sleep 5"]
+
   # -- Extra environment variables for the aggregator container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
 
@@ -955,6 +969,20 @@ verifier:
         clientId: ""
         # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
         usePodIdentity: false
+
+  # -- Override the container entrypoint. See [command](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/).
+  command: []
+  # - /bin/verifier
+
+  # -- Arguments passed to the container entrypoint. See [args](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/).
+  args: []
+  # - --config=/etc/config.toml
+
+  # -- Container lifecycle hooks (postStart / preStop). See [lifecycle](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/).
+  lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "sleep 5"]
 
   # -- Extra environment variables for the verifier container. See [env](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
   env: []
