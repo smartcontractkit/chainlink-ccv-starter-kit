@@ -50,7 +50,7 @@ properties:
     default: committee-verifier-1
   ccv-cell.verifier.config.signer_address:
     type: string
-    default: "0x072cdf41f8814e23a3856591645b639f9c71de83"
+    default: "auto"
 
   grpcRoute.enabled:
     type: boolean
