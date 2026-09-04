@@ -8,6 +8,19 @@ signs results, and sends them to an aggregator. The aggregator checks signed res
 cells form a **committee**; each cell's Postgres/secrets/KMS isolation requirements are in the chart's
 [Requirements](charts/ccv-cell/README.md#requirements).
 
+## Table of Contents
+
+- [1. Prerequisites](#1-prerequisites)
+- [2. Configure the Values](#2-configure-the-values)
+- [3. Deploy](#3-deploy)
+- [4. Verify it worked](#4-verify-it-worked)
+- [5. If a pod won't start](#5-if-a-pod-wont-start)
+- [6. Upgrades, rollback, scaling](#6-upgrades-rollback-scaling)
+- [7. Committee size recommendations](#7-committee-size-recommendations)
+- [8. Peer information and credential exchange](#8-peer-information-and-credential-exchange)
+- [9. Metrics: deploy an OTel Collector](#9-metrics-deploy-an-otel-collector)
+- [10. Monitoring the cell](#10-monitoring-the-cell)
+
 ## 1. Prerequisites
 
 - Cluster and infra dependencies (Gateway/Ingress + mesh, Postgres, secrets manager, KMS, Cloud IAM): see the
@@ -558,3 +571,90 @@ verifier:
 Full field reference: the `Beholder` block in the config docs linked under [Prerequisites](#1-prerequisites).
 `OTEL_SERVICE_NAME` is the standard OTel env var for naming a service; it's confirmed to work on both the aggregator
 and the verifier.
+
+## 10. Monitoring the cell
+
+Once metrics are flowing (see [Metrics: deploy an OTel Collector](#9-metrics-deploy-an-otel-collector)), here's what to actually watch: the health
+checks wired into the pods, the metrics that matter, and a working example dashboard.
+
+### Health checks
+
+Both components expose plain HTTP health endpoints, already wired as Kubernetes liveness/readiness probes:
+
+| Component | Endpoint | Port | Purpose |
+|---|---|---|---|
+| Aggregator | `/health/live` | `health` (`healthCheck.port`, default `8080`) | Liveness. Failing means the process itself is stuck; Kubernetes restarts the pod. |
+| Aggregator | `/health/ready` | `health` (`8080`) | Readiness. Failing means the aggregator can't serve traffic yet (e.g. still connecting to Postgres). |
+| Verifier | `/health` | `bootstrap-info` (`bootstrap.config.server.listen_port`, default `9988`) | Liveness for the bootstrap/coordination side. |
+| Verifier | `/health` | `http` (main HTTP port, default `8100`) | Readiness for the verifier's own serving side. |
+
+> [!NOTE]
+> For the aggregator's public gRPC endpoint specifically, also set up an external uptime check, separate from the
+> Kubernetes probes above. Size it to a 10s interval / 5rps baseline so a synthetic
+> check catches a network-path or ingress failure the in-cluster probes can't see.
+
+### Metrics: what to watch
+
+The tables below group metrics the same way as the [working example dashboard](#working-example-the-ccv-cell-overview-dashboard).
+
+**Liveness & heartbeats**
+
+| Metric | What it means | Threshold |
+|---|---|---|
+| `aggregator_heartbeat_verifier_heartbeat_timestamp` | Last time the aggregator heard a heartbeat from a given verifier (`caller_id`). Watch `time() - <this>`. | Amber past 60s, red past 300s. Stale or absent means that verifier isn't reporting. |
+| `verifier_heartbeat_score` / `aggregator_heartbeat_verifier_score` | A verifier's block-height lag behind its committee, in MADs (Median Absolute Deviations). `1.0` = leading, `2.0` = 1 MAD behind, `4.0` = 3 MADs behind. | Amber past `2.0`, red past `4.0`. |
+| `verifier_local_chain_global_cursed` | Whether a chain is globally cursed (RMN). | Any value `> 0` is a hard stop, not a warning; investigate immediately, don't wait for it to clear on its own. |
+
+**Source reader health**
+
+| Metric | What it means | Threshold |
+|---|---|---|
+| `verifier_source_reader_state` | Per-chain reader state: `running`, `poll_error`, `finality_blocked`, `disabled`. | Anything but `running` (outside a deliberate `disabled`) needs a look. |
+| `verifier_source_reader_last_successful_poll_timestamp` | Last successful poll. Watch `time() - <this>`; only meaningful once state is `poll_error`. | Climbs unbounded on a stalled reader; there's no universal "good" ceiling, watch the trend. |
+| `verifier_source_chain_latest_block` / `_safe_block` / `_finalized_block` | Chain head vs. safe/finalized head, per the source RPC. | A widening gap points at the RPC or upstream finality, not the verifier. |
+| `verifier_source_reader_last_processed_finalized_block` | How far the reader's own processing lags the chain's finalized head. | Should track the chain's finalized head closely once caught up. |
+
+**Message pipeline & finality backlog**
+
+| Metric | What it means | Threshold |
+|---|---|---|
+| `verifier_messages_in_flight{state="pending_finality"}` | Messages currently waiting on source-chain finality, per lane. | Growing = lane-wide finality blockage, not a single message. |
+| `verifier_oldest_message_age_seconds{state="pending_finality"}` | Age of the oldest message still waiting on finality, per lane. | Red past 900s (15m). |
+| `verifier_message_transitions_total` | Counter of pipeline-stage transitions (`source_read`, `admission`, `verification`, `storage_write`, ...), by `outcome`/`reason`. | `sum by (stage, outcome, reason) (increase(...[15m]))` is the single best panel for finding where a stuck message is stuck. |
+| `verifier_message_failures_total` | Counter of failures, by `stage`/`retryable`/`error_class`. | No live series until the first real failure; empty is healthy, not broken. |
+| `verifier_message_e2e_latency_seconds` | End-to-end message latency histogram. | No fixed threshold; use it to judge whether your own 15m alert is actually anomalous for your traffic pattern. |
+
+**Verification & storage internals**
+
+| Metric | What it means | Threshold |
+|---|---|---|
+| `verifier_task_verification_queue_size` | Verification backlog. | Sustained growth means verification can't keep up with intake. |
+| `verifier_verification_queue_latency_seconds` | Time spent queued before verification starts. | Track p95; rising alongside queue size confirms genuine backpressure. |
+| `verifier_storage_write_queue_size`, `verifier_storage_write_duration_seconds`, `verifier_storage_query_duration_seconds` | Storage-layer backlog and latency, isolated from verification logic. | Rising write/query p95 without a queue-size change usually points at Postgres, not the verifier. |
+
+**Aggregator**
+
+| Metric | What it means | Threshold |
+|---|---|---|
+| `aggregator_completed_aggregations_total`, `aggregator_verifications_total` | Baseline throughput. | No fixed threshold; establish your own baseline, then alert on deviations. |
+| `aggregator_pending_aggregations_channel_buffer` | Backpressure indicator. | Sustained growth means aggregation can't keep up with incoming verifications. |
+| `aggregator_time_to_aggregation_seconds` | Time to complete an aggregation. | Track p50/p95/p99; a growing p99 with a flat p50 usually means a subset of messages is stuck, not a general slowdown. |
+| `aggregator_storage_errors_total`, `aggregator_grpc_errors_total` | Error counters. | Should sit at ~0; any sustained rate is worth investigating. |
+| `aggregator_message_disablement_rules_refresh_failure_ratio` | Whether disablement-rule refreshes are failing. | Sustained non-zero means the aggregator is working off stale rules. |
+
+### Working example: the CCV Cell Overview dashboard
+
+![CCV Cell Overview dashboard](grafana/ccv-cell-dashboard.png)
+
+![Message Pipeline & Finality Backlog row](grafana/ccv-cell-pipeline.png)
+
+[`grafana/ccv-cell-dashboard.json`](grafana/ccv-cell-dashboard.json) in this repo is a working Grafana dashboard
+(schema v2) built against a live `ccv-cell` deployment. Import it into any Grafana instance pointed at your metrics
+backend. It's parametrized with four dashboard variables (`datasource`, `verifier_id`, `source_chain_name`,
+`dest_chain_name`), so it isn't tied to any one deployment.
+
+It's laid out in the same six groups as the metric tables above: **Liveness**, **Source Reader Health**, **Message
+Pipeline & Finality Backlog**, **Verification & Storage Internals**, **Aggregator**, and **Incident Scope** (a
+top-10-oldest-pending-messages table, the fastest way to tell one stuck message apart from a lane-wide or
+committee-wide issue).
+
