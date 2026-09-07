@@ -38,7 +38,7 @@ jobs:
           docker buildx build -f marketplace/gcp/Dockerfile \
             --platform linux/amd64 \
             --build-arg TAG="${VERSION}" \
-            --annotation "$ANNOTATION" -t "${DEST}/deployer:${VERSION}" --push marketplace/gcp
+            --annotation "$ANNOTATION" -t "${DEST}/deployer:${VERSION}" --push .
 
       - run: |
           set -euo pipefail

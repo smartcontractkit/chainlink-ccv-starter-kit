@@ -1,0 +1,9 @@
+*
+!charts/ccv-cell
+!marketplace
+marketplace/*
+!marketplace/gcp
+marketplace/gcp/*
+!marketplace/gcp/chart
+!marketplace/gcp/schema.yaml
+!marketplace/gcp/data-test
