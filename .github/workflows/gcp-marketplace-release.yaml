@@ -1,0 +1,56 @@
+name: gcp-marketplace-release
+on:
+  repository_dispatch:
+    types:
+      - marketplace-release
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version already in GCP Artifact Registry (e.g. v1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  VERSION: ${{ github.event.client_payload.tag || inputs.version }}
+  DEST: us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/ccv-cell
+  ANNOTATION: "com.googleapis.cloudmarketplace.product.service.name=services/chainlink-ccv-starter-kit.endpoints.chainlink-labs-ltd-public.cloud.goog"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: chainlink-labs-ltd-public
+          workload_identity_provider: projects/748463247428/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+
+      - run: |
+          set -euo pipefail
+
+          docker buildx build -f marketplace/gcp/Dockerfile \
+            --platform linux/amd64 \
+            --build-arg TAG="${VERSION}" \
+            --annotation "$ANNOTATION" -t "${DEST}/deployer:${VERSION}" --push .
+
+      - run: |
+          set -euo pipefail
+
+          values=marketplace/gcp/data-test/chart-overlay/values.yaml
+
+          for image in postgres curl; do
+            registry=$(yq ".verify.${image}.image.registry" "$values")
+            repository=$(yq ".verify.${image}.image.repository" "$values")
+            tag=$(yq ".verify.${image}.image.tag" "$values")
+            fullImageName="${registry}/${repository}:${tag}"
+
+            docker buildx imagetools create --annotation "$ANNOTATION" \
+              --tag "${DEST}/${image}:${VERSION}" "$fullImageName"
+          done

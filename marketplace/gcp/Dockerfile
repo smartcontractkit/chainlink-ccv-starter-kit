@@ -2,12 +2,13 @@ ARG MARKETPLACE_TOOLS_TAG=latest
 
 FROM alpine:3 AS build
 
-RUN apk add --no-cache yq tar gettext
+RUN apk add --no-cache yq tar gettext helm
 
 WORKDIR /work
-COPY chart/ccv-cell-mp ./chart
-COPY schema.yaml ./schema.yaml
-COPY data-test ./data-test
+COPY marketplace/gcp/chart/ccv-cell-mp ./chart
+COPY marketplace/gcp/schema.yaml ./schema.yaml
+COPY marketplace/gcp/data-test ./data-test
+COPY charts/ccv-cell /charts/ccv-cell
 
 ARG REGISTRY
 ARG TAG
@@ -16,7 +17,8 @@ ARG TAG
 RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" chart/Chart.yaml
 
 # Production chart tarball (mirrors what the helm onbuild base would have produced).
-RUN tar -czf /chart.tar.gz chart
+RUN helm package chart --dependency-update --destination /tmp/chart \
+    && mv /tmp/chart/*.tgz /chart.tar.gz
 
 # Verify chart: deep-merge overlay values into the chart's values, add overlay templates, re-tar.
 RUN mkdir -p /work/test \

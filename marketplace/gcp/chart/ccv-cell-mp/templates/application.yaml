@@ -7,8 +7,7 @@ metadata:
   labels:
     {{- include "ccv-cell.selectorLabels" $sub | nindent 4 }}
   annotations:
-    # PLACEHOLDER: partner_id/product_id must match the Marketplace listing IDs.
-    marketplace.cloud.google.com/deploy-info: '{"partner_id": "chainlink", "product_id": "ccv-cell", "partner_name": "Chainlink"}'
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "chainlink-labs-ltd-public", "product_id": "chainlink-ccv-starter-kit", "partner_name": "Chainlink Labs"}'
 spec:
   descriptor:
     type: CCV Cell
