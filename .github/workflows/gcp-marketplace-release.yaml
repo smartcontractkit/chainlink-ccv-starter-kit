@@ -38,6 +38,7 @@ jobs:
           docker buildx build -f marketplace/gcp/Dockerfile \
             --platform linux/amd64 \
             --build-arg TAG="${VERSION}" \
+            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base:latest" \
             --annotation "$ANNOTATION" -t "${DEST}/deployer:${VERSION}" --push .
 
       - run: |

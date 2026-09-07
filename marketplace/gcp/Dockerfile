@@ -1,4 +1,4 @@
-ARG MARKETPLACE_TOOLS_TAG=latest
+ARG DEPLOYER_BASE=gcr.io/cloud-marketplace-tools/k8s/deployer_helm:latest
 
 FROM alpine:3 AS build
 
@@ -32,7 +32,7 @@ RUN mkdir -p /work/test \
 RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < schema.yaml > /schema.yaml \
     && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < data-test/schema.yaml > /schema-test.yaml
 
-FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm:$MARKETPLACE_TOOLS_TAG
+FROM $DEPLOYER_BASE
 
 COPY --from=build /chart.tar.gz /data/chart/chart.tar.gz
 COPY --from=build /schema.yaml /data/schema.yaml
