@@ -17,7 +17,7 @@ permissions:
 env:
   VERSION: ${{ github.event.client_payload.tag || inputs.version }}
   DEST: us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/ccv-cell
-  ANNOTATION: "com.googleapis.cloudmarketplace.product.service.name=services/chainlink-ccv-starter-kit.endpoints.chainlink-labs-ltd-public.cloud.goog"
+  ANNOTATION: "index:com.googleapis.cloudmarketplace.product.service.name=services/chainlink-ccv-starter-kit.endpoints.chainlink-labs-ltd-public.cloud.goog"
 
 jobs:
   publish:
@@ -52,6 +52,8 @@ jobs:
             tag=$(yq ".verify.${image}.image.tag" "$values")
             fullImageName="${registry}/${repository}:${tag}"
 
-            docker buildx imagetools create --annotation "$ANNOTATION" \
-              --tag "${DEST}/${image}:${VERSION}" "$fullImageName"
+            printf 'FROM %s' "$fullImageName" | docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --annotation "$ANNOTATION" \
+              --tag "${DEST}/${image}:${VERSION}" --push -
           done
