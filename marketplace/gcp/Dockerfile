@@ -29,8 +29,9 @@ RUN mkdir -p /work/test \
     && tar -czf /chart-test.tar.gz -C /work/test chart
 
 # publishedVersion in both schemas is envsubst'd from $TAG (matches the helm onbuild behavior).
-RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < schema.yaml > /schema.yaml \
-    && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < data-test/schema.yaml > /schema-test.yaml
+# GCP schema validator requires semver without the leading 'v'.
+RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG#v}" envsubst < schema.yaml > /schema.yaml \
+    && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG#v}" envsubst < data-test/schema.yaml > /schema-test.yaml
 
 FROM $DEPLOYER_BASE
 
