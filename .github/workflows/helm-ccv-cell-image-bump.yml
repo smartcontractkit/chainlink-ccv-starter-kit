@@ -45,6 +45,11 @@ jobs:
           gh pr list --label "$LABEL" --json number --jq '.[].number' \
             | xargs -r -I{} gh pr close {} --comment "Superseded by a newer bump."
 
+      - name: Install helm-docs
+        uses: losisin/helm-docs-github-action@9e0787c426fdec38be6288bb5c0559dcb388412c # v2.0.1
+        with:
+          version: v1.14.2
+
       - name: Bump and open pull request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,12 +58,13 @@ jobs:
 
           sed -i "/^aggregator:/,/^verifier:/ s/tag: .*/tag: \"${VERSION}\"/" "$VALUES"
           sed -i "/^verifier:/,\$ s/tag: .*/tag: \"${VERSION}\"/"             "$VALUES"
+          helm-docs --chart-search-root charts/ccv-cell --template-files README.md.gotmpl
 
           branch="helm-ccv-cell-image-bump/${VERSION}-${{ github.run_id }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git add "$VALUES"
+          git add "$VALUES" charts/ccv-cell/README.md
           git commit -m "bump ccv images to ${VERSION}"
           git push origin "$branch"
 
