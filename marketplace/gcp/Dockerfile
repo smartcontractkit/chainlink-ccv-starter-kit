@@ -13,8 +13,7 @@ COPY charts/ccv-cell /charts/ccv-cell
 ARG REGISTRY
 ARG TAG
 
-# GCP requires descriptor.version == publishedVersion
-RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG#v}\"/" chart/Chart.yaml
+RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" chart/Chart.yaml
 
 # Production chart tarball: helm package to vendor dependencies, then repack under the 'chart/'
 # root that the deployer base hardcodes (extracted/<name>/chart/).
@@ -32,10 +31,8 @@ RUN mkdir -p /work/test \
     && cp data-test/chart-overlay/templates/* /work/test/chart/templates/ \
     && tar -czf /chart-test.tar.gz -C /work/test chart
 
-# publishedVersion in both schemas is envsubst'd from $TAG (matches the helm onbuild behavior).
-# GCP schema validator requires semver without the leading 'v'.
-RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG#v}" envsubst < schema.yaml > /schema.yaml \
-    && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG#v}" envsubst < data-test/schema.yaml > /schema-test.yaml
+RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < schema.yaml > /schema.yaml \
+    && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < data-test/schema.yaml > /schema-test.yaml
 
 FROM $DEPLOYER_BASE
 

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version already in GCP Artifact Registry (e.g. v1.2.3)'
+        description: 'Release version without v prefix (e.g. 1.2.3)'
         required: true
         type: string
 
