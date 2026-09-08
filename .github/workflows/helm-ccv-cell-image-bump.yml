@@ -1,9 +1,15 @@
 name: helm-ccv-cell-image-bump
 
 on:
-  schedule:
-    - cron: "0 * * * *"
+  repository_dispatch:
+    types:
+      - image-bump
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image tag to set for aggregator and verifier (e.g. v1.2.3)'
+        required: true
+        type: string
 
 concurrency:
   group: helm-ccv-cell-image-bump
@@ -16,6 +22,7 @@ permissions:
 env:
   LABEL: "ci=helm-ccv-cell-image-bump"
   VALUES: charts/ccv-cell/values.yaml
+  VERSION: ${{ github.event.client_payload.tag || inputs.version }}
 
 jobs:
   bump:
@@ -23,102 +30,33 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Get current and latest tags
-        id: tags
+      - name: Close stale bump PRs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          
-          registry=$(yq '.global.image.registry' "$VALUES")
-
-          pr_open_for_branch() {
-            gh pr list --label "$LABEL" --json headRefName --jq '.[].headRefName' | grep -qxF "$1"
-          }
-
-          latest_tag() {
-            token=$(curl -m5 -sSfL "https://public.ecr.aws/token/?service=public.ecr.aws&scope=repository:$1:pull" | jq -r '.token')
-            curl -m5 -sSf -H "Authorization: Bearer $token" "https://public.ecr.aws/v2/$1/tags/list" \
-              | jq -r '.tags[]' \
-              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-              | sort -V \
-              | tail -1
-          }
-
-          agg_repo=$(yq '.aggregator.image.repository' "$VALUES")
-          agg_current=$(yq '.aggregator.image.tag' "$VALUES")
-          agg_latest=$(latest_tag "$agg_repo")
-
-          ver_repo=$(yq '.verifier.image.repository' "$VALUES")
-          ver_current=$(yq '.verifier.image.tag' "$VALUES")
-          ver_latest=$(latest_tag "$ver_repo")
-
-          echo "agg_repo=${agg_repo}"         >> "$GITHUB_OUTPUT"
-          echo "agg_current=${agg_current}"   >> "$GITHUB_OUTPUT"
-          echo "agg_latest=${agg_latest}"     >> "$GITHUB_OUTPUT"
-          echo "ver_repo=${ver_repo}"         >> "$GITHUB_OUTPUT"
-          echo "ver_current=${ver_current}"   >> "$GITHUB_OUTPUT"
-          echo "ver_latest=${ver_latest}"     >> "$GITHUB_OUTPUT"
-
-          needs_bump=false
-          if [ "$agg_current" != "$agg_latest" ] || [ "$ver_current" != "$ver_latest" ]; then
-            branch="helm-ccv-cell-image-bump/${agg_latest}-${ver_latest}"
-            if ! pr_open_for_branch "$branch"; then
-              needs_bump=true
-              echo "branch=${branch}" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-          echo "needs_bump=${needs_bump}" >> "$GITHUB_OUTPUT"
-
-      - name: Close stale bump PR
-        if: steps.tags.outputs.needs_bump == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          
           gh pr list --label "$LABEL" --json number --jq '.[].number' \
             | xargs -r -I{} gh pr close {} --comment "Superseded by a newer bump."
 
-      - name: Update values.yaml
-        if: steps.tags.outputs.needs_bump == 'true'
-        env:
-          AGG_LATEST: ${{ steps.tags.outputs.agg_latest }}
-          VER_LATEST: ${{ steps.tags.outputs.ver_latest }}
-        run: |
-          set -euo pipefail
-          
-          sed -i "/^aggregator:/,/^verifier:/ s/tag: .*/tag: \"${AGG_LATEST}\"/" "$VALUES"
-          sed -i "/^verifier:/,\$ s/tag: .*/tag: \"${VER_LATEST}\"/"             "$VALUES"
-
-      - name: Open pull request
-        if: steps.tags.outputs.needs_bump == 'true'
+      - name: Bump and open pull request
         env:
           GH_TOKEN: ${{ github.token }}
-          AGG_REPO: ${{ steps.tags.outputs.agg_repo }}
-          AGG_CURRENT: ${{ steps.tags.outputs.agg_current }}
-          AGG_LATEST: ${{ steps.tags.outputs.agg_latest }}
-          VER_REPO: ${{ steps.tags.outputs.ver_repo }}
-          VER_CURRENT: ${{ steps.tags.outputs.ver_current }}
-          VER_LATEST: ${{ steps.tags.outputs.ver_latest }}
         run: |
           set -euo pipefail
-          
-          branch="${{ steps.tags.outputs.branch }}"
+
+          sed -i "/^aggregator:/,/^verifier:/ s/tag: .*/tag: \"${VERSION}\"/" "$VALUES"
+          sed -i "/^verifier:/,\$ s/tag: .*/tag: \"${VERSION}\"/"             "$VALUES"
+
+          branch="helm-ccv-cell-image-bump/${VERSION}-${{ github.run_id }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git add charts/ccv-cell/values.yaml
-          git commit -m "bump ccv images (aggregator ${AGG_LATEST}, verifier ${VER_LATEST})"
+          git add "$VALUES"
+          git commit -m "bump ccv images to ${VERSION}"
           git push origin "$branch"
 
-          body="| component | from | to |
-          | --- | --- | --- |
-          | \`${AGG_REPO}\` | \`${AGG_CURRENT}\` | \`${AGG_LATEST}\` |
-          | \`${VER_REPO}\` | \`${VER_CURRENT}\` | \`${VER_LATEST}\` |"
-
           gh pr create \
-            --title "Bump ccv images (aggregator ${AGG_LATEST}, verifier ${VER_LATEST})" \
-            --body "$body" \
+            --title "Bump ccv images to ${VERSION}" \
+            --body "Bumps aggregator and verifier image tags to \`${VERSION}\`." \
             --label "$LABEL" \
             --head "$branch"
