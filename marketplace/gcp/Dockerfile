@@ -16,9 +16,13 @@ ARG TAG
 # Application descriptor version must equal schema publishedVersion (the tag).
 RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" chart/Chart.yaml
 
-# Production chart tarball (mirrors what the helm onbuild base would have produced).
+# Production chart tarball: helm package to vendor dependencies, then repack under the 'chart/'
+# root that the deployer base hardcodes (extracted/<name>/chart/).
 RUN helm package chart --dependency-update --destination /tmp/chart \
-    && mv /tmp/chart/*.tgz /chart.tar.gz
+    && mkdir /tmp/repack \
+    && tar -xzf /tmp/chart/*.tgz -C /tmp/repack \
+    && mv /tmp/repack/$(ls /tmp/repack) /tmp/repack/chart \
+    && tar -czf /chart.tar.gz -C /tmp/repack chart
 
 # Verify chart: deep-merge overlay values into the chart's values, add overlay templates, re-tar.
 RUN mkdir -p /work/test \
