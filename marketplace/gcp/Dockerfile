@@ -13,12 +13,15 @@ COPY charts/ccv-cell /charts/ccv-cell
 ARG REGISTRY
 ARG TAG
 
-# Application descriptor version must equal schema publishedVersion (the tag).
 RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" chart/Chart.yaml
 
-# Production chart tarball (mirrors what the helm onbuild base would have produced).
+# Production chart tarball: helm package to vendor dependencies, then repack under the 'chart/'
+# root that the deployer base hardcodes (extracted/<name>/chart/).
 RUN helm package chart --dependency-update --destination /tmp/chart \
-    && mv /tmp/chart/*.tgz /chart.tar.gz
+    && mkdir /tmp/repack \
+    && tar -xzf /tmp/chart/*.tgz -C /tmp/repack \
+    && mv /tmp/repack/$(ls /tmp/repack) /tmp/repack/chart \
+    && tar -czf /chart.tar.gz -C /tmp/repack chart
 
 # Verify chart: deep-merge overlay values into the chart's values, add overlay templates, re-tar.
 RUN mkdir -p /work/test \
@@ -28,10 +31,8 @@ RUN mkdir -p /work/test \
     && cp data-test/chart-overlay/templates/* /work/test/chart/templates/ \
     && tar -czf /chart-test.tar.gz -C /work/test chart
 
-# publishedVersion in both schemas is envsubst'd from $TAG (matches the helm onbuild behavior).
-# GCP schema validator requires semver without the leading 'v'.
-RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG#v}" envsubst < schema.yaml > /schema.yaml \
-    && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG#v}" envsubst < data-test/schema.yaml > /schema-test.yaml
+RUN env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < schema.yaml > /schema.yaml \
+    && env -i "REGISTRY=${REGISTRY}" "TAG=${TAG}" envsubst < data-test/schema.yaml > /schema-test.yaml
 
 FROM $DEPLOYER_BASE
 
