@@ -13,8 +13,8 @@ COPY charts/ccv-cell /charts/ccv-cell
 ARG REGISTRY
 ARG TAG
 
-# Application descriptor version must equal schema publishedVersion (the tag).
-RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" chart/Chart.yaml
+# GCP requires descriptor.version == publishedVersion
+RUN sed -i "s/^appVersion:.*/appVersion: \"${TAG#v}\"/" chart/Chart.yaml
 
 # Production chart tarball: helm package to vendor dependencies, then repack under the 'chart/'
 # root that the deployer base hardcodes (extracted/<name>/chart/).
