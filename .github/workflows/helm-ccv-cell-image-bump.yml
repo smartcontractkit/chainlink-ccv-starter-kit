@@ -41,6 +41,9 @@ jobs:
       - name: Bump and open pull request
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+        # language="shell script"
         run: |
           set -euo pipefail
 
@@ -52,7 +55,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
           git add "$VALUES"
-          git commit -m "bump ccv images to ${VERSION}"
+
+          coauthorArgs=()
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            coauthorArgs=(-m "Co-authored-by: ${ACTOR} <${ACTOR}@users.noreply.github.com>")
+          fi
+          git commit -m "bump ccv images to ${VERSION}" "${coauthorArgs[@]}"
           git push origin "$branch"
 
           gh pr create \
