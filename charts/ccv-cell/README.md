@@ -208,6 +208,23 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.secrets.app.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | aggregator.secrets.app.labels | object | `{}` | Labels to add to the aggregator app Secret. |
 | aggregator.secrets.app.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.    Configure the values below for the chosen type. |
+| aggregator.secrets.config.annotations | object | `{}` | Annotations to add to the aggregator config Secret (non-values types only). |
+| aggregator.secrets.config.awsSecretStore.region | string | `""` | AWS region where the secret lives. |
+| aggregator.secrets.config.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built config.toml. |
+| aggregator.secrets.config.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| aggregator.secrets.config.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| aggregator.secrets.config.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity. |
+| aggregator.secrets.config.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| aggregator.secrets.config.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built config.toml. |
+| aggregator.secrets.config.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| aggregator.secrets.config.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| aggregator.secrets.config.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
+| aggregator.secrets.config.existingSecret.key | string | `"config.toml"` | Key inside the Secret that holds the config file. |
+| aggregator.secrets.config.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret holding the pre-built config.toml. |
+| aggregator.secrets.config.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| aggregator.secrets.config.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
+| aggregator.secrets.config.labels | object | `{}` | Labels to add to the aggregator config Secret (non-values types only). |
+| aggregator.secrets.config.type | string | `"values"` | Config provisioning strategy. Default `values` renders config.toml from the `aggregator.config` tree above.    Set a secret backend to mount a pre-built config.toml from a secret store instead (e.g. for GCP Marketplace).    Supported: `values`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, `azureKeyVault`. `externalSecret` is not supported here.    We strongly recommend, if possible, that you just leave this as-is and use `aggregator.config`. |
 | aggregator.service.annotations | object | `{}` | Annotations to add to the aggregator Service. |
 | aggregator.service.clusterIP | string | `""` | Static ClusterIP to assign to the Service. Leave empty to let Kubernetes allocate one. |
 | aggregator.service.labels | object | `{}` | Labels to add to the aggregator Service. |
@@ -339,6 +356,40 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
 | verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.    Configure the values below for the chosen type. |
+| verifier.secrets.bootstrapConfig.annotations | object | `{}` | Annotations to add to the verifier bootstrap-config Secret (non-values types only). |
+| verifier.secrets.bootstrapConfig.awsSecretStore.region | string | `""` | AWS region where the secret lives. |
+| verifier.secrets.bootstrapConfig.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built bootstrap-config.toml. |
+| verifier.secrets.bootstrapConfig.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.bootstrapConfig.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| verifier.secrets.bootstrapConfig.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity. |
+| verifier.secrets.bootstrapConfig.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| verifier.secrets.bootstrapConfig.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built bootstrap-config.toml. |
+| verifier.secrets.bootstrapConfig.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.bootstrapConfig.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| verifier.secrets.bootstrapConfig.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
+| verifier.secrets.bootstrapConfig.existingSecret.key | string | `"bootstrap-config.toml"` | Key inside the Secret that holds the bootstrap config file. |
+| verifier.secrets.bootstrapConfig.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret holding the pre-built bootstrap-config.toml. |
+| verifier.secrets.bootstrapConfig.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.bootstrapConfig.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
+| verifier.secrets.bootstrapConfig.labels | object | `{}` | Labels to add to the verifier bootstrap-config Secret (non-values types only). |
+| verifier.secrets.bootstrapConfig.type | string | `"values"` | Bootstrap config provisioning strategy. Default `values` renders bootstrap-config.toml from the `verifier.bootstrap.config` tree above.    Set a secret backend to mount a pre-built bootstrap-config.toml from a secret store instead (e.g. for GCP Marketplace).    Supported: `values`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, `azureKeyVault`. `externalSecret` is not supported here.    We strongly recommend, if possible, that you just leave this as-is and use `verifier.bootstrap.config`. |
+| verifier.secrets.config.annotations | object | `{}` | Annotations to add to the verifier config Secret (non-values types only). |
+| verifier.secrets.config.awsSecretStore.region | string | `""` | AWS region where the secret lives. |
+| verifier.secrets.config.awsSecretStore.secretName | string | `""` | AWS Secrets Manager secret name or full ARN holding the pre-built config.toml. |
+| verifier.secrets.config.awsSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.config.awsSecretStore.usePodIdentity | bool | `false` | Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval. |
+| verifier.secrets.config.azureKeyVault.clientId | string | `""` | Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity. |
+| verifier.secrets.config.azureKeyVault.keyvaultName | string | `""` | Azure Key Vault name (the short name, not the full URI). |
+| verifier.secrets.config.azureKeyVault.secretName | string | `""` | Name of the Key Vault secret holding the pre-built config.toml. |
+| verifier.secrets.config.azureKeyVault.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.config.azureKeyVault.tenantId | string | `""` | Azure AD tenant ID where the Key Vault lives. |
+| verifier.secrets.config.azureKeyVault.usePodIdentity | bool | `false` | Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval. |
+| verifier.secrets.config.existingSecret.key | string | `"config.toml"` | Key inside the Secret that holds the config file. |
+| verifier.secrets.config.existingSecret.name | string | `""` | Name of an existing Kubernetes Secret holding the pre-built config.toml. |
+| verifier.secrets.config.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
+| verifier.secrets.config.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
+| verifier.secrets.config.labels | object | `{}` | Labels to add to the verifier config Secret (non-values types only). |
+| verifier.secrets.config.type | string | `"values"` | Config provisioning strategy. Default `values` renders config.toml from the `verifier.config` tree above.    Set a secret backend to mount a pre-built config.toml from a secret store instead (e.g. for GCP Marketplace).    Supported: `values`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, `azureKeyVault`. `externalSecret` is not supported here.    We strongly recommend, if possible, that you just leave this as-is and use `verifier.config`. |
 | verifier.secrets.evm.annotations | object | `{}` | Annotations to add to the verifier evm Secret. |
 | verifier.secrets.evm.awsSecretStore | object | `{"region":"","secretName":"","secretProviderClass":{"name":""},"usePodIdentity":false}` | AWS Secrets Manager, mounted via the [AWS Secrets and Configuration Provider (ASCP)](https://github.com/aws/secrets-store-csi-driver-provider-aws)    for the Secrets Store CSI Driver. Requires the ASCP installed on the cluster and either    IRSA or EKS Pod Identity configured for `verifier.serviceAccount`. |
 | verifier.secrets.evm.awsSecretStore.region | string | `""` | AWS region where the secret lives. If omitted, the ASCP infers it from the node's    `topology.kubernetes.io/region` label (adds per-mount overhead on large clusters). |

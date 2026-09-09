@@ -37,13 +37,25 @@ properties:
 
   ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName:
     type: string
-    default: placeholder
+    default: ""
+  ccv-cell.aggregator.secrets.config.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: ""
   ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName:
     type: string
-    default: placeholder
+    default: ""
+  ccv-cell.verifier.secrets.config.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: ""
+  ccv-cell.verifier.secrets.bootstrapConfig.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: ""
   ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName:
     type: string
-    default: placeholder
+    default: ""
+  ccv-cell.verifier.secrets.evm.gcpSecretStore.secretVersionResourceName:
+    type: string
+    default: ""
 
   ccv-cell.verifier.config.verifier_id:
     type: string

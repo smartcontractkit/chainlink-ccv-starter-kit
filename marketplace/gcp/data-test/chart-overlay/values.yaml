@@ -15,40 +15,19 @@ verify:
 
 ccv-cell:
   aggregator:
-    config:
-      committee:
-        quorumConfigs:
-          "16015286601757825753":
-            sourceVerifierAddress: "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
-            threshold: 1
-            signers:
-              - address: "0x0000000000000000000000000000000000000001"
-        destinationVerifiers:
-          "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
-      clients:
-        - clientId: committee-verifier-1
-          groups: [default]
-          enabled: true
     secrets:
       app:
         type: existingSecret
         existingSecret:
           name: verify-aggregator-app
           key: secrets.toml
+      config:
+        type: existingSecret
+        existingSecret:
+          name: verify-aggregator-config
+          key: config.toml
 
   verifier:
-    config:
-      verifier_id: "committee-verifier-1"
-      aggregators:
-        - name: aggregator-1
-          secret_name: aggregator_1
-          useInClusterAggregator: true
-      committee_verifier_addresses:
-        "16015286601757825753": "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
-      on_ramp_addresses:
-        "16015286601757825753": "0xA94E45744553F4B2bea9DfB8979a02962B980732"
-      rmn_remote_addresses:
-        "16015286601757825753": "0xACD1e9A75cA486c6883BC5835a022536fA67fCbF"
     evm:
       config:
         chains:
@@ -64,9 +43,22 @@ ccv-cell:
         existingSecret:
           name: verify-verifier-app
           key: secrets.toml
+      config:
+        type: existingSecret
+        existingSecret:
+          name: verify-verifier-config
+          key: config.toml
+      bootstrapConfig:
+        type: existingSecret
+        existingSecret:
+          name: verify-verifier-bootstrap-config
+          key: bootstrap-config.toml
       bootstrap:
         type: existingSecret
         keystoreBackend: postgres
         existingSecret:
           name: verify-verifier-bootstrap
           key: secrets.toml
+      evm:
+        # Keep inline evm config for verify; override gcpSecretStore back to values.
+        type: values

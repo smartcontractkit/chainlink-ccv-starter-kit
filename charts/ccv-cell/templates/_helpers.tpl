@@ -94,7 +94,7 @@ include "ccv-cell.secretName" (dict "root" . "component" "aggregator" "subCompon
 {{- define "ccv-cell.secretName" -}}
   {{- $componentRoot := index .root.Values .component -}}
   {{- $secret := index $componentRoot.secrets .subComponent -}}
-  {{- $default := printf "%s-%s-%s" (include "ccv-cell.fullname" .root) .component .subComponent -}}
+  {{- $default := printf "%s-%s-%s" (include "ccv-cell.fullname" .root) .component (.subComponent | lower) -}}
 
   {{- if eq $secret.type "existingSecret" -}}
       {{- required (printf "Secret '%s' for the %s is of type 'existingSecret', but no name was provided" .subComponent .component) $secret.existingSecret.name -}}

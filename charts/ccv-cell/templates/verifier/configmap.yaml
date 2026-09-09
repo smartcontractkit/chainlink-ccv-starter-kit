@@ -1,4 +1,6 @@
 {{- if .Values.verifier.enabled }}
+{{- $anyValues := or (eq .Values.verifier.secrets.bootstrapConfig.type "values") (eq .Values.verifier.secrets.config.type "values") (eq .Values.verifier.secrets.evm.type "values") }}
+{{- if $anyValues }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,12 +15,15 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
+  {{- if eq .Values.verifier.secrets.bootstrapConfig.type "values" }}
   bootstrap-config.toml: |
 {{- $cfg := deepCopy .Values.verifier.bootstrap.config }}
 {{- $_ := set $cfg "app_config_mode" "local_app_config" }}
 {{- include "ccv-cell.castInts" (dict "m" $cfg.server "keys" (list "listen_port")) }}
 {{- include "ccv-cell.castInts" (dict "m" $cfg.Monitoring.Beholder "keys" (list "MetricReaderInterval" "TraceBatchTimeout")) }}
 {{ $cfg | toToml | indent 4 }}
+  {{- end }}
+  {{- if eq .Values.verifier.secrets.config.type "values" }}
   config.toml: |
 {{- $vcfg := .Values.verifier.config }}
 {{- $aggregators := list }}
@@ -40,7 +45,8 @@ data:
     ) }}
 {{- end }}
 {{ merge (dict "aggregators" $aggregators) $vcfg | toToml | indent 4 }}
-{{- if eq .Values.verifier.secrets.evm.type "values" }}
+  {{- end }}
+  {{- if eq .Values.verifier.secrets.evm.type "values" }}
   evm.toml: |
 {{- $ecfg := deepCopy .Values.verifier.evm.config }}
 {{- range $chain := $ecfg.chains }}
@@ -57,5 +63,6 @@ data:
 {{- $_ := set $chain "nodes" $nodes }}
 {{- end }}
 {{ $ecfg | toToml | indent 4 }}
+  {{- end }}
 {{- end }}
 {{- end }}
