@@ -96,13 +96,13 @@ spec:
           resources:
             {{- toYaml .Values.verifier.resources | nindent 12 }}
           volumeMounts:
-            - name: config
+            - name: {{ if eq .Values.verifier.secrets.bootstrapConfig.type "values" }}config{{ else }}bootstrapconfig-secret{{ end }}
               mountPath: /etc/config.toml
-              subPath: bootstrap-config.toml
+              subPath: {{ if eq .Values.verifier.secrets.bootstrapConfig.type "values" }}bootstrap-config.toml{{ else }}{{ include "ccv-cell.secretSubPath" (dict "root" . "component" "verifier" "subComponent" "bootstrapConfig") }}{{ end }}
               readOnly: true
-            - name: config
+            - name: {{ if eq .Values.verifier.secrets.config.type "values" }}config{{ else }}verifierconfig-secret{{ end }}
               mountPath: {{ .Values.verifier.bootstrap.config.local_app_config_path }}
-              subPath: config.toml
+              subPath: {{ if eq .Values.verifier.secrets.config.type "values" }}config.toml{{ else }}{{ include "ccv-cell.secretSubPath" (dict "root" . "component" "verifier" "subComponent" "config") }}{{ end }}
               readOnly: true
             {{- if eq .Values.verifier.secrets.evm.type "values" }}
             - name: config
@@ -130,9 +130,20 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       volumes:
+        {{- $needsConfigMap := or (eq .Values.verifier.secrets.bootstrapConfig.type "values") (eq .Values.verifier.secrets.config.type "values") (eq .Values.verifier.secrets.evm.type "values") }}
+        {{- if $needsConfigMap }}
         - name: config
           configMap:
             name: {{ include "ccv-cell.verifier.fullname" . }}-config
+        {{- end }}
+        {{- if ne .Values.verifier.secrets.bootstrapConfig.type "values" }}
+        - name: bootstrapconfig-secret
+          {{- include "ccv-cell.secretVolume" (dict "root" . "component" "verifier" "subComponent" "bootstrapConfig") | nindent 10 }}
+        {{- end }}
+        {{- if ne .Values.verifier.secrets.config.type "values" }}
+        - name: verifierconfig-secret
+          {{- include "ccv-cell.secretVolume" (dict "root" . "component" "verifier" "subComponent" "config") | nindent 10 }}
+        {{- end }}
         {{- if ne .Values.verifier.secrets.evm.type "values" }}
         - name: evm-secret
           {{- include "ccv-cell.secretVolume" (dict "root" . "component" "verifier" "subComponent" "evm") | nindent 10 }}

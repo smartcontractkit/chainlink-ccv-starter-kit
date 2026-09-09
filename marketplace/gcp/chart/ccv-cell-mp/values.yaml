@@ -13,6 +13,8 @@ ccv-cell:
     secrets:
       app:
         type: gcpSecretStore
+      config:
+        type: gcpSecretStore
 
   verifier:
     serviceAccount:
@@ -20,6 +22,12 @@ ccv-cell:
     secrets:
       app:
         type: gcpSecretStore
+      config:
+        type: gcpSecretStore
+      bootstrapConfig:
+        type: gcpSecretStore
       bootstrap:
         type: gcpSecretStore
         keystoreBackend: kms
+      evm:
+        type: gcpSecretStore

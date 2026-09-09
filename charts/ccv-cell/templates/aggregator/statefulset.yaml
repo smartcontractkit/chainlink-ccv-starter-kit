@@ -93,7 +93,7 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/config.toml
-              subPath: config.toml
+              subPath: {{ if eq .Values.aggregator.secrets.config.type "values" }}config.toml{{ else }}{{ include "ccv-cell.secretSubPath" (dict "root" . "component" "aggregator" "subComponent" "config") }}{{ end }}
               readOnly: true
             - name: secrets
               mountPath: /etc/aggregator/secrets.toml
@@ -107,8 +107,12 @@ spec:
         {{- end }}
       volumes:
         - name: config
+          {{- if eq .Values.aggregator.secrets.config.type "values" }}
           configMap:
             name: {{ include "ccv-cell.aggregator.fullname" . }}-config
+          {{- else }}
+          {{- include "ccv-cell.secretVolume" (dict "root" . "component" "aggregator" "subComponent" "config") | nindent 10 }}
+          {{- end }}
         - name: secrets
           {{- include "ccv-cell.secretVolume" (dict "root" . "component" "aggregator" "subComponent" "app") | nindent 10 }}
         {{- with .Values.aggregator.extraVolumes }}

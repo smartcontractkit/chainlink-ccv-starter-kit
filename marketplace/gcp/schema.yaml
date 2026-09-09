@@ -78,6 +78,13 @@ properties:
       Secret Manager version holding the aggregator secrets.toml, e.g.
       projects/my-project/secrets/ccv-cell-aggregator/versions/latest
     pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+  ccv-cell.aggregator.secrets.config.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Aggregator config, Secret Manager version
+    description: >-
+      Secret Manager version holding the aggregator config.toml (committee, quorum, destination
+      verifiers, clients). e.g. projects/my-project/secrets/ccv-cell-aggregator-config/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
   ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName:
     type: string
     title: Verifier secrets, Secret Manager version
@@ -85,12 +92,34 @@ properties:
       Secret Manager version holding the verifier secrets.toml, e.g.
       projects/my-project/secrets/ccv-cell-verifier/versions/latest
     pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+  ccv-cell.verifier.secrets.config.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Verifier config, Secret Manager version
+    description: >-
+      Secret Manager version holding the verifier config.toml (aggregator addresses, committee
+      verifier addresses, on-ramp and RMN remote addresses). e.g.
+      projects/my-project/secrets/ccv-cell-verifier-config/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+  ccv-cell.verifier.secrets.bootstrapConfig.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Verifier bootstrap config, Secret Manager version
+    description: >-
+      Secret Manager version holding the verifier bootstrap-config.toml (chains, keystore mode,
+      monitoring). e.g. projects/my-project/secrets/ccv-cell-verifier-bootstrap-config/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
   ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName:
     type: string
     title: Verifier bootstrap secrets, Secret Manager version
     description: >-
       Secret Manager version holding the verifier bootstrap secrets.toml, e.g.
       projects/my-project/secrets/ccv-cell-verifier-bootstrap/versions/latest
+    pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
+  ccv-cell.verifier.secrets.evm.gcpSecretStore.secretVersionResourceName:
+    type: string
+    title: Verifier EVM config, Secret Manager version
+    description: >-
+      Secret Manager version holding the verifier evm config.toml (chain RPC endpoints and
+      finality settings). e.g. projects/my-project/secrets/ccv-cell-verifier-evm/versions/latest
     pattern: '^projects/[^/]+/secrets/[^/]+/versions/[^/]+$'
 
   ccv-cell.verifier.config.verifier_id:
@@ -141,8 +170,12 @@ required:
   - ccv-cell.aggregator.serviceAccount.name
   - ccv-cell.verifier.serviceAccount.name
   - ccv-cell.aggregator.secrets.app.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.aggregator.secrets.config.gcpSecretStore.secretVersionResourceName
   - ccv-cell.verifier.secrets.app.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.verifier.secrets.config.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.verifier.secrets.bootstrapConfig.gcpSecretStore.secretVersionResourceName
   - ccv-cell.verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName
+  - ccv-cell.verifier.secrets.evm.gcpSecretStore.secretVersionResourceName
   - ccv-cell.verifier.config.verifier_id
   - ccv-cell.verifier.config.signer_address
 
@@ -150,14 +183,14 @@ form:
   - widget: help
     description: >-
       <p>A CCV Cell needs external dependencies that this deployment does not create: a PostgreSQL
-      cluster (Cloud SQL recommended), Secret Manager secrets holding the connection strings and
-      API credentials, and Cloud KMS keys for signing. Create them before deploying, and bind the
-      service accounts above to a Google service account with access to them through
-      <a href="https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity">Workload
+      cluster (Cloud SQL recommended), Secret Manager secrets holding the connection strings,
+      API credentials, and application config, and Cloud KMS keys for signing. Create them before
+      deploying, and bind the service accounts above to a Google service account with access to them
+      through <a href="https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity">Workload
       Identity Federation for GKE</a>.</p>
+      <p>All structured configuration (committee quorum, chain selectors, RPC endpoints) is supplied
+      as pre-built TOML files stored in Secret Manager, referenced by the version resource names
+      below. See the deployment guide for the expected format of each config secret.</p>
       <p>The aggregator gRPC endpoint is exposed through a Gateway API GRPCRoute. You must already
       have a Gateway that terminates TLS and supports HTTP/2 end to end; supply its name and the
       hostname below.</p>
-      <p>The committee quorum, chain selectors and RPC endpoints are structured configuration that
-      this form cannot express. Supply them with <code>helm upgrade</code> after the initial
-      deployment.</p>

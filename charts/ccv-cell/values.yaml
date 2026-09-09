@@ -291,6 +291,57 @@ aggregator:
         # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
         usePodIdentity: false
 
+    config:
+      # -- Annotations to add to the aggregator config Secret (non-values types only).
+      annotations: {}
+      # -- Labels to add to the aggregator config Secret (non-values types only).
+      labels: {}
+
+      # -- Config provisioning strategy. Default `values` renders config.toml from the `aggregator.config` tree above.
+      #    Set a secret backend to mount a pre-built config.toml from a secret store instead (e.g. for GCP Marketplace).
+      #    Supported: `values`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, `azureKeyVault`. `externalSecret` is not supported here.
+      #    We strongly recommend, if possible, that you just leave this as-is and use `aggregator.config`.
+      type: values
+
+      existingSecret:
+        # -- Name of an existing Kubernetes Secret holding the pre-built config.toml.
+        name: ""
+        # -- Key inside the Secret that holds the config file.
+        key: "config.toml"
+
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
+      awsSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- AWS Secrets Manager secret name or full ARN holding the pre-built config.toml.
+        secretName: ""
+        # -- AWS region where the secret lives.
+        region: ""
+        # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
+        usePodIdentity: false
+
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built config.toml.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
   # -- Override the container entrypoint. See [command](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/).
   command: []
   # - /bin/aggregator
@@ -813,6 +864,108 @@ verifier:
         tenantId: ""
         # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
         #    Leave empty when using Pod Identity (`usePodIdentity: true`).
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
+    config:
+      # -- Annotations to add to the verifier config Secret (non-values types only).
+      annotations: {}
+      # -- Labels to add to the verifier config Secret (non-values types only).
+      labels: {}
+
+      # -- Config provisioning strategy. Default `values` renders config.toml from the `verifier.config` tree above.
+      #    Set a secret backend to mount a pre-built config.toml from a secret store instead (e.g. for GCP Marketplace).
+      #    Supported: `values`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, `azureKeyVault`. `externalSecret` is not supported here.
+      #    We strongly recommend, if possible, that you just leave this as-is and use `verifier.config`.
+      type: values
+
+      existingSecret:
+        # -- Name of an existing Kubernetes Secret holding the pre-built config.toml.
+        name: ""
+        # -- Key inside the Secret that holds the config file.
+        key: "config.toml"
+
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
+      awsSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- AWS Secrets Manager secret name or full ARN holding the pre-built config.toml.
+        secretName: ""
+        # -- AWS region where the secret lives.
+        region: ""
+        # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
+        usePodIdentity: false
+
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built config.toml.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
+        clientId: ""
+        # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
+        usePodIdentity: false
+
+    bootstrapConfig:
+      # -- Annotations to add to the verifier bootstrap-config Secret (non-values types only).
+      annotations: {}
+      # -- Labels to add to the verifier bootstrap-config Secret (non-values types only).
+      labels: {}
+
+      # -- Bootstrap config provisioning strategy. Default `values` renders bootstrap-config.toml from the `verifier.bootstrap.config` tree above.
+      #    Set a secret backend to mount a pre-built bootstrap-config.toml from a secret store instead (e.g. for GCP Marketplace).
+      #    Supported: `values`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, `azureKeyVault`. `externalSecret` is not supported here.
+      #    We strongly recommend, if possible, that you just leave this as-is and use `verifier.bootstrap.config`.
+      type: values
+
+      existingSecret:
+        # -- Name of an existing Kubernetes Secret holding the pre-built bootstrap-config.toml.
+        name: ""
+        # -- Key inside the Secret that holds the bootstrap config file.
+        key: "bootstrap-config.toml"
+
+      gcpSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`.
+        secretVersionResourceName: ""
+
+      awsSecretStore:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- AWS Secrets Manager secret name or full ARN holding the pre-built bootstrap-config.toml.
+        secretName: ""
+        # -- AWS region where the secret lives.
+        region: ""
+        # -- Set to `true` to use EKS Pod Identity instead of IRSA for AWS credential retrieval.
+        usePodIdentity: false
+
+      azureKeyVault:
+        secretProviderClass:
+          # -- Name of the SecretProviderClass resource to create.
+          name: ""
+        # -- Azure Key Vault name (the short name, not the full URI).
+        keyvaultName: ""
+        # -- Name of the Key Vault secret holding the pre-built bootstrap-config.toml.
+        secretName: ""
+        # -- Azure AD tenant ID where the Key Vault lives.
+        tenantId: ""
+        # -- Client ID of the Azure AD application or user-assigned managed identity to use for Workload Identity.
         clientId: ""
         # -- Set to `true` to use Azure AD Pod Identity instead of Workload Identity for credential retrieval.
         usePodIdentity: false
