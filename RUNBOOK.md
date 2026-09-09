@@ -20,6 +20,7 @@ cells form a **committee**; each cell's Postgres/secrets/KMS isolation requireme
 - [8. Peer information and credential exchange](#8-peer-information-and-credential-exchange)
 - [9. Metrics: deploy an OTel Collector](#9-metrics-deploy-an-otel-collector)
 - [10. Monitoring the cell](#10-monitoring-the-cell)
+- [11. Alerting](#11-alerting)
 
 ## 1. Prerequisites
 
@@ -603,7 +604,7 @@ The tables below group metrics the same way as the [working example dashboard](#
 |---|---|---|
 | `aggregator_heartbeat_verifier_heartbeat_timestamp` | Last time the aggregator heard a heartbeat from a given verifier (`caller_id`). Watch `time() - <this>`. | Amber past 60s, red past 300s. Stale or absent means that verifier isn't reporting. |
 | `verifier_heartbeat_score` / `aggregator_heartbeat_verifier_score` | A verifier's block-height lag behind its committee, in MADs (Median Absolute Deviations). `1.0` = leading, `2.0` = 1 MAD behind, `4.0` = 3 MADs behind. | Amber past `2.0`, red past `4.0`. |
-| `verifier_local_chain_global_cursed` | Whether a chain is globally cursed (RMN). | Any value `> 0` is a hard stop, not a warning; investigate immediately, don't wait for it to clear on its own. |
+| `verifier_local_chain_global_cursed` / `verifier_remote_chain_cursed` | Whether the source chain, or a destination chain, is cursed (RMN). | Informational: a cursed chain causes the committee CCV to drop the message, not get stuck. Replay it once un-cursed; see [Alerting](#11-alerting). |
 
 **Source reader health**
 
@@ -640,7 +641,7 @@ The tables below group metrics the same way as the [working example dashboard](#
 | `aggregator_pending_aggregations_channel_buffer` | Backpressure indicator. | Sustained growth means aggregation can't keep up with incoming verifications. |
 | `aggregator_time_to_aggregation_seconds` | Time to complete an aggregation. | Track p50/p95/p99; a growing p99 with a flat p50 usually means a subset of messages is stuck, not a general slowdown. |
 | `aggregator_storage_errors_total`, `aggregator_grpc_errors_total` | Error counters. | Should sit at ~0; any sustained rate is worth investigating. |
-| `aggregator_message_disablement_rules_refresh_failure_ratio` | Whether disablement-rule refreshes are failing. | Sustained non-zero means the aggregator is working off stale rules. |
+| `aggregator_message_disablement_rules_refresh_failure_ratio` | Whether disablement-rule refreshes are failing. | Sustained non-zero means the verifier is working off stale rules. |
 
 ### Working example: the CCV Cell Overview dashboard
 
@@ -657,4 +658,116 @@ It's laid out in the same six groups as the metric tables above: **Liveness**, *
 Pipeline & Finality Backlog**, **Verification & Storage Internals**, **Aggregator**, and **Incident Scope** (a
 top-10-oldest-pending-messages table, the fastest way to tell one stuck message apart from a lane-wide or
 committee-wide issue).
+
+## 11. Alerting
+
+> [!NOTE]
+> This is a reference implementation, not a managed service. You run your own on-call, your own AlertManager (or
+> equivalent), and your own paging tool. Adjust routing, receivers, and even which alerts fire, to your own setup.
+
+### Alert catalog: page or ticket
+
+For the alerts, "page" means wake someone up _now_, while "ticket" means it can wait for business hours. Both use the metrics and thresholds from [Monitoring the cell](#10-monitoring-the-cell).
+
+| Alert | Condition | Severity | Why | First action |
+|---|---|---|---|---|
+| Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Ticket | That verifier stopped reporting to this aggregator. Only bad if it goes stale on every aggregator the verifier is configured with; one faulty aggregator alone isn't. | ["Confirm Verifier Liveness"](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md#1-confirm-verifier-liveness) |
+| Chain cursed (local or remote) | `verifier_local_chain_global_cursed > 0` or `verifier_remote_chain_cursed > 0` | Ticket | Informational: the message is dropped, not stuck. | This is [RMN's circuit breaker](https://docs.chain.link/ccip/concepts/architecture/offchain/risk-management-network), not a ccv-cell bug. Replay the message once un-cursed. |
+| Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). | See the ["unverified after 15 minutes" runbook](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md). |
+| KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. | Revoke/rotate the key, then investigate the caller. |
+| Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. | - |
+| Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Page | Investigate source RPC health. | - |
+| Verification or storage queue growing | sustained growth in `verifier_task_verification_queue_size` / `verifier_storage_write_queue_size` | Ticket | Capacity issue, not yet an outage. | - |
+| Aggregator errors nonzero | `rate(aggregator_storage_errors_total[5m]) > 0` or `rate(aggregator_grpc_errors_total[5m]) > 0` | Ticket | Should sit at ~0; investigate the trend. | - |
+| Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Verifier is working off stale rules. | - |
+
+### AlertManager rules
+
+Samples, matching the alert catalog above. Adjust names, `for:` durations, and thresholds to your own traffic.
+
+```yaml
+groups:
+  - name: ccv-cell
+    rules:
+      - alert: CCVVerifierHeartbeatStale
+        expr: time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "Verifier {{ $labels.caller_id }} hasn't sent a heartbeat in over 5 minutes"
+
+      - alert: CCVGlobalCurse
+        expr: verifier_local_chain_global_cursed > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "A chain is globally cursed"
+
+      - alert: CCVMessageStuck
+        expr: verifier_oldest_message_age_seconds{state="pending_finality"} > 900
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "A message on {{ $labels.source_chain_name }} -> {{ $labels.dest_chain_name }} has been pending finality for over 15 minutes"
+
+      - alert: CCVHeartbeatScoreDegraded
+        expr: min by (verifier_id) (verifier_heartbeat_score) > 2
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Verifier {{ $labels.verifier_id }} is lagging its committee"
+
+      - alert: CCVSourceReaderPollError
+        expr: verifier_source_reader_state{state="poll_error"} == 1
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "Source reader for {{ $labels.source_chain_name }} can't poll"
+
+      - alert: CCVAggregatorErrors
+        expr: rate(aggregator_storage_errors_total[5m]) > 0 or rate(aggregator_grpc_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Aggregator is emitting storage or gRPC errors"
+```
+
+### AlertManager routing
+
+Route by the `severity` label above (`page` vs `ticket`) to your own on-call tool and ticketing system. See
+AlertManager's own [routing](https://prometheus.io/docs/alerting/latest/configuration/#route) and
+[receiver](https://prometheus.io/docs/alerting/latest/configuration/#receiver) docs for exact syntax.
+
+### Key misuse (KMS)
+
+> [!WARNING]
+> Only the verifier should ever use its signing KMS key. Alert on any other use, immediately.
+
+`verifier.secrets.bootstrap.kms.ecdsaKeyId` (see [Secrets](#secrets)) holds the verifier's result-signing key. Anyone
+else who can call `Sign` with it can forge signed results as that verifier. This is covered by your cloud's audit log,
+not the ccv-cell's own metrics. Set up an alert matching any use of that key by a principal other than the verifier's own identity, using your cloud's own guide.
+
+- **AWS**: [Logging AWS KMS API calls with AWS CloudTrail](https://docs.aws.amazon.com/kms/latest/developerguide/logging-using-cloudtrail.html)
+- **GCP**: [Audit logging for Cloud KMS](https://cloud.google.com/kms/docs/audit-logging)
+- **Azure**: [Monitor Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/monitor-key-vault)
+
+Either way, page immediately: it's a signal that a signing key may be compromised.
+
+### SLIs and SLOs
+
+If you're building SLOs on top of these metrics, three starting points:
+
+- **Availability**: percentage of time each verifier's heartbeat is fresh (under 60s).
+- **Latency**: percentage of messages verified within your own attestation latency budget, from
+  `verifier_message_e2e_latency_seconds`.
+- **Correctness**: aggregator error rate (`aggregator_storage_errors_total` + `aggregator_grpc_errors_total`) staying
+  at zero.
+
+Actual SLO targets are your own business decision, not something this guide can set for you.
 
