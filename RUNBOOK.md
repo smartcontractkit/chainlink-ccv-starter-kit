@@ -676,7 +676,7 @@ For the alerts, "page" means wake someone up _now_, while "ticket" means it can 
 | Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). | See the ["unverified after 15 minutes" runbook](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md). |
 | KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. | Revoke/rotate the key, then investigate the caller. |
 | Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. | - |
-| Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Ticket | Investigate source RPC health. | - |
+| Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Page | Investigate source RPC health. | - |
 | Verification or storage queue growing | sustained growth in `verifier_task_verification_queue_size` / `verifier_storage_write_queue_size` | Ticket | Capacity issue, not yet an outage. | - |
 | Aggregator errors nonzero | `rate(aggregator_storage_errors_total[5m]) > 0` or `rate(aggregator_grpc_errors_total[5m]) > 0` | Ticket | Should sit at ~0; investigate the trend. | - |
 | Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Verifier is working off stale rules. | - |
@@ -725,7 +725,7 @@ groups:
         expr: verifier_source_reader_state{state="poll_error"} == 1
         for: 5m
         labels:
-          severity: ticket
+          severity: page
         annotations:
           summary: "Source reader for {{ $labels.source_chain_name }} can't poll"
 
