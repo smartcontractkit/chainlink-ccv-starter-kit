@@ -604,7 +604,7 @@ The tables below group metrics the same way as the [working example dashboard](#
 |---|---|---|
 | `aggregator_heartbeat_verifier_heartbeat_timestamp` | Last time the aggregator heard a heartbeat from a given verifier (`caller_id`). Watch `time() - <this>`. | Amber past 60s, red past 300s. Stale or absent means that verifier isn't reporting. |
 | `verifier_heartbeat_score` / `aggregator_heartbeat_verifier_score` | A verifier's block-height lag behind its committee, in MADs (Median Absolute Deviations). `1.0` = leading, `2.0` = 1 MAD behind, `4.0` = 3 MADs behind. | Amber past `2.0`, red past `4.0`. |
-| `verifier_local_chain_global_cursed` | Whether a chain is globally cursed (RMN). | Any value `> 0` is a hard stop, not a warning; investigate immediately, don't wait for it to clear on its own. |
+| `verifier_local_chain_global_cursed` / `verifier_remote_chain_cursed` | Whether the source chain, or a destination chain, is cursed (RMN). | Informational: a cursed chain causes the committee CCV to drop the message, not get stuck. Replay it once un-cursed; see [Alerting](#11-alerting). |
 
 **Source reader health**
 
@@ -641,7 +641,7 @@ The tables below group metrics the same way as the [working example dashboard](#
 | `aggregator_pending_aggregations_channel_buffer` | Backpressure indicator. | Sustained growth means aggregation can't keep up with incoming verifications. |
 | `aggregator_time_to_aggregation_seconds` | Time to complete an aggregation. | Track p50/p95/p99; a growing p99 with a flat p50 usually means a subset of messages is stuck, not a general slowdown. |
 | `aggregator_storage_errors_total`, `aggregator_grpc_errors_total` | Error counters. | Should sit at ~0; any sustained rate is worth investigating. |
-| `aggregator_message_disablement_rules_refresh_failure_ratio` | Whether disablement-rule refreshes are failing. | Sustained non-zero means the aggregator is working off stale rules. |
+| `aggregator_message_disablement_rules_refresh_failure_ratio` | Whether disablement-rule refreshes are failing. | Sustained non-zero means the verifier is working off stale rules. |
 
 ### Working example: the CCV Cell Overview dashboard
 
@@ -671,15 +671,15 @@ For the alerts, "page" means wake someone up _now_, while "ticket" means it can 
 
 | Alert | Condition | Severity | Why | First action |
 |---|---|---|---|---|
-| Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Page | That verifier stopped reporting. | ["Confirm Verifier Liveness"](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md#1-confirm-verifier-liveness) |
-| Global curse active | `verifier_local_chain_global_cursed > 0` | Page | Hard stop, not a warning. | Usually an [RMN circuit breaker](https://docs.chain.link/ccip/concepts/architecture/offchain/risk-management-network), not a ccv-cell bug. Confirm on the [RMNRemote contract](https://docs.chain.link/ccip/concepts/architecture/onchain/evm/components#rmn-contract) (address is your own `rmn_remote_addresses` config), then escalate to your network operators. |
+| Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Ticket | That verifier stopped reporting to this aggregator. Only bad if it goes stale on every aggregator the verifier is configured with; one faulty aggregator alone isn't. | ["Confirm Verifier Liveness"](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md#1-confirm-verifier-liveness) |
+| Chain cursed (local or remote) | `verifier_local_chain_global_cursed > 0` or `verifier_remote_chain_cursed > 0` | Ticket | Informational: the message is dropped, not stuck. | This is [RMN's circuit breaker](https://docs.chain.link/ccip/concepts/architecture/offchain/risk-management-network), not a ccv-cell bug. Replay the message once un-cursed. |
 | Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). | See the ["unverified after 15 minutes" runbook](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md). |
 | KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. | Revoke/rotate the key, then investigate the caller. |
 | Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. | - |
 | Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Ticket | Investigate source RPC health. | - |
 | Verification or storage queue growing | sustained growth in `verifier_task_verification_queue_size` / `verifier_storage_write_queue_size` | Ticket | Capacity issue, not yet an outage. | - |
 | Aggregator errors nonzero | `rate(aggregator_storage_errors_total[5m]) > 0` or `rate(aggregator_grpc_errors_total[5m]) > 0` | Ticket | Should sit at ~0; investigate the trend. | - |
-| Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Aggregator is working off stale rules. | - |
+| Disablement-rules refresh failing | `aggregator_message_disablement_rules_refresh_failure_ratio > 0` for 15m | Ticket | Verifier is working off stale rules. | - |
 
 ### AlertManager rules
 
