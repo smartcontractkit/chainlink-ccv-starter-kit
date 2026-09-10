@@ -1,0 +1,755 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "x-* keys are reserved for YAML anchors and are always allowed at every level.",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "global": { "$ref": "#/$defs/global" },
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "aggregator": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "$ref": "#/$defs/image" },
+        "config": { "$ref": "#/$defs/genericConfig" },
+        "configMap": {
+          "type": "object",
+          "properties": {
+            "annotations": { "$ref": "#/$defs/metaMap" },
+            "labels": { "$ref": "#/$defs/metaMap" }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "properties": {
+            "app": { "$ref": "#/$defs/appSecret" },
+            "config": { "$ref": "#/$defs/configSecret" }
+          }
+        },
+        "command": { "$ref": "#/$defs/stringList" },
+        "args": { "$ref": "#/$defs/stringList" },
+        "lifecycle": { "$ref": "#/$defs/lifecycle" },
+        "env": { "$ref": "#/$defs/envVar" },
+        "envFrom": { "$ref": "#/$defs/envFrom" },
+        "extraInitContainers": { "$ref": "#/$defs/container" },
+        "extraContainers": { "$ref": "#/$defs/container" },
+        "serviceAccount": { "$ref": "#/$defs/serviceAccount" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "podAnnotations": { "$ref": "#/$defs/metaMap" },
+        "podLabels": { "$ref": "#/$defs/metaMap" },
+        "service": { "$ref": "#/$defs/service" },
+        "ingress": { "$ref": "#/$defs/ingress" },
+        "grpcRoute": { "$ref": "#/$defs/gatewayRoute" },
+        "httpRoute": { "$ref": "#/$defs/gatewayRoute" },
+        "networkPolicy": { "$ref": "#/$defs/networkPolicy" },
+        "resources": { "$ref": "#/$defs/resources" },
+        "podResources": { "$ref": "#/$defs/resources" },
+        "livenessProbe": { "$ref": "#/$defs/probe" },
+        "readinessProbe": { "$ref": "#/$defs/probe" },
+        "startupProbe": { "$ref": "#/$defs/probe" },
+        "extraVolumes": { "$ref": "#/$defs/volume" },
+        "extraVolumeMounts": { "$ref": "#/$defs/volumeMount" },
+        "nodeSelector": { "$ref": "#/$defs/metaMap" },
+        "tolerations": { "$ref": "#/$defs/toleration" },
+        "affinity": { "$ref": "#/$defs/affinity" },
+        "podSecurityContext": { "$ref": "#/$defs/podSecurityContext" },
+        "containerSecurityContext": { "$ref": "#/$defs/securityContext" },
+        "shareProcessNamespace": { "type": "boolean" }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "$ref": "#/$defs/image" },
+        "config": { "$ref": "#/$defs/genericConfig" },
+        "configMap": {
+          "type": "object",
+          "properties": {
+            "annotations": { "$ref": "#/$defs/metaMap" },
+            "labels": { "$ref": "#/$defs/metaMap" }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "properties": {
+            "app": { "$ref": "#/$defs/appSecret" },
+            "config": { "$ref": "#/$defs/configSecret" },
+            "bootstrapConfig": { "$ref": "#/$defs/configSecret" },
+            "bootstrap": { "$ref": "#/$defs/bootstrapSecret" },
+            "evm": { "$ref": "#/$defs/evmSecret" }
+          }
+        },
+        "command": { "$ref": "#/$defs/stringList" },
+        "args": { "$ref": "#/$defs/stringList" },
+        "lifecycle": { "$ref": "#/$defs/lifecycle" },
+        "env": { "$ref": "#/$defs/envVar" },
+        "envFrom": { "$ref": "#/$defs/envFrom" },
+        "extraInitContainers": { "$ref": "#/$defs/container" },
+        "extraContainers": { "$ref": "#/$defs/container" },
+        "serviceAccount": { "$ref": "#/$defs/serviceAccount" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "podAnnotations": { "$ref": "#/$defs/metaMap" },
+        "podLabels": { "$ref": "#/$defs/metaMap" },
+        "networkPolicy": { "$ref": "#/$defs/networkPolicy" },
+        "resources": { "$ref": "#/$defs/resources" },
+        "podResources": { "$ref": "#/$defs/resources" },
+        "livenessProbe": { "$ref": "#/$defs/probe" },
+        "readinessProbe": { "$ref": "#/$defs/probe" },
+        "startupProbe": { "$ref": "#/$defs/probe" },
+        "extraVolumes": { "$ref": "#/$defs/volume" },
+        "extraVolumeMounts": { "$ref": "#/$defs/volumeMount" },
+        "nodeSelector": { "$ref": "#/$defs/metaMap" },
+        "tolerations": { "$ref": "#/$defs/toleration" },
+        "affinity": { "$ref": "#/$defs/affinity" },
+        "podSecurityContext": { "$ref": "#/$defs/podSecurityContext" },
+        "containerSecurityContext": { "$ref": "#/$defs/securityContext" },
+        "shareProcessNamespace": { "type": "boolean" },
+        "bootstrap": {
+          "type": "object",
+          "properties": {
+            "config": { "$ref": "#/$defs/genericConfig" }
+          },
+          "additionalProperties": true
+        },
+        "evm": {
+          "type": "object",
+          "properties": {
+            "config": { "$ref": "#/$defs/genericConfig" }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "genericConfig": {
+      "type": "object",
+      "description": "Application configuration passthrough. Accepts any fields; see values.yaml for examples. App updates do not require schema changes.",
+      "additionalProperties": true
+    },
+    "metaMap": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "registry": { "type": "string" },
+        "repository": { "type": "string" },
+        "tag": { "type": "string" },
+        "digest": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "name": { "type": "string" },
+        "automountServiceAccountToken": { "type": "boolean" }
+      }
+    },
+    "global": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "registry": { "type": "string" }
+          }
+        },
+        "imagePullSecrets": { "$ref": "#/$defs/imagePullSecret" },
+        "labels": { "$ref": "#/$defs/metaMap" }
+      }
+    },
+    "secretProviderClassName": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
+    },
+    "gcpSecretStore": {
+      "type": "object",
+      "properties": {
+        "secretProviderClass": { "$ref": "#/$defs/secretProviderClassName" },
+        "secretVersionResourceName": { "type": "string" }
+      }
+    },
+    "awsSecretStore": {
+      "type": "object",
+      "properties": {
+        "secretProviderClass": { "$ref": "#/$defs/secretProviderClassName" },
+        "secretName": { "type": "string" },
+        "region": { "type": "string" },
+        "usePodIdentity": { "type": "boolean" }
+      }
+    },
+    "azureKeyVault": {
+      "type": "object",
+      "properties": {
+        "secretProviderClass": { "$ref": "#/$defs/secretProviderClassName" },
+        "keyvaultName": { "type": "string" },
+        "secretName": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "usePodIdentity": { "type": "boolean" }
+      }
+    },
+    "existingSecret": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "key": { "type": "string" }
+      }
+    },
+    "secretStoreRef": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "kind": { "type": "string" }
+      }
+    },
+    "remoteRef": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "appSecret": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["externalSecret", "existingSecret", "gcpSecretStore", "awsSecretStore", "azureKeyVault"]
+        },
+        "existingSecret": { "$ref": "#/$defs/existingSecret" },
+        "gcpSecretStore": { "$ref": "#/$defs/gcpSecretStore" },
+        "awsSecretStore": { "$ref": "#/$defs/awsSecretStore" },
+        "azureKeyVault": { "$ref": "#/$defs/azureKeyVault" },
+        "externalSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "secretStoreRef": { "$ref": "#/$defs/secretStoreRef" },
+            "storageUrlRemoteRef": { "$ref": "#/$defs/remoteRef" },
+            "dbUrlRemoteRef": { "$ref": "#/$defs/remoteRef" }
+          }
+        }
+      }
+    },
+    "configSecret": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["values", "existingSecret", "gcpSecretStore", "awsSecretStore", "azureKeyVault"]
+        },
+        "existingSecret": { "$ref": "#/$defs/existingSecret" },
+        "gcpSecretStore": { "$ref": "#/$defs/gcpSecretStore" },
+        "awsSecretStore": { "$ref": "#/$defs/awsSecretStore" },
+        "azureKeyVault": { "$ref": "#/$defs/azureKeyVault" }
+      }
+    },
+    "bootstrapSecret": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["externalSecret", "existingSecret", "gcpSecretStore", "awsSecretStore", "azureKeyVault"]
+        },
+        "keystoreBackend": {
+          "type": "string",
+          "enum": ["postgres", "kms"]
+        },
+        "kms": {
+          "type": "object",
+          "properties": {
+            "ecdsaKeyId": { "type": "string" },
+            "ed25519KeyId": { "type": "string" }
+          }
+        },
+        "existingSecret": { "$ref": "#/$defs/existingSecret" },
+        "gcpSecretStore": { "$ref": "#/$defs/gcpSecretStore" },
+        "awsSecretStore": { "$ref": "#/$defs/awsSecretStore" },
+        "azureKeyVault": { "$ref": "#/$defs/azureKeyVault" },
+        "externalSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "secretStoreRef": { "$ref": "#/$defs/secretStoreRef" },
+            "dbUrlRemoteRef": { "$ref": "#/$defs/remoteRef" },
+            "keystorePasswordRemoteRef": { "$ref": "#/$defs/remoteRef" }
+          }
+        }
+      }
+    },
+    "evmSecret": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["values", "externalSecret", "existingSecret", "gcpSecretStore", "awsSecretStore", "azureKeyVault"]
+        },
+        "existingSecret": { "$ref": "#/$defs/existingSecret" },
+        "gcpSecretStore": { "$ref": "#/$defs/gcpSecretStore" },
+        "awsSecretStore": { "$ref": "#/$defs/awsSecretStore" },
+        "azureKeyVault": { "$ref": "#/$defs/azureKeyVault" },
+        "externalSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "secretStoreRef": { "$ref": "#/$defs/secretStoreRef" }
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "limits": {
+          "type": "object",
+          "additionalProperties": { "oneOf": [{"type": "string"}, {"type": "integer"}, {"type": "number"}] }
+        },
+        "requests": {
+          "type": "object",
+          "additionalProperties": { "oneOf": [{"type": "string"}, {"type": "integer"}, {"type": "number"}] }
+        }
+      },
+      "additionalProperties": true
+    },
+    "probe": {
+      "type": ["object", "null"],
+      "properties": {
+        "httpGet": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string"},
+            "port": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
+            "scheme": {"type": "string"}
+          }
+        },
+        "exec": {"type": "object", "properties": {"command": {"$ref": "#/$defs/stringList"}}},
+        "tcpSocket": {"type": "object", "properties": {"port": {"oneOf": [{"type": "string"}, {"type": "integer"}]}}},
+        "grpc": {
+          "type": "object",
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "service": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "initialDelaySeconds": {"type": "integer"},
+        "periodSeconds": {"type": "integer"},
+        "timeoutSeconds": {"type": "integer"},
+        "successThreshold": {"type": "integer"},
+        "failureThreshold": {"type": "integer"},
+        "terminationGracePeriodSeconds": {"type": "integer"}
+      },
+      "additionalProperties": true
+    },
+    "seLinuxOptions": {
+      "type": "object",
+      "properties": {
+        "user":  { "type": "string" },
+        "role":  { "type": "string" },
+        "type":  { "type": "string" },
+        "level": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "seccompProfile": {
+      "type": "object",
+      "properties": {
+        "type":             { "type": "string", "enum": ["Localhost", "RuntimeDefault", "Unconfined"] },
+        "localhostProfile": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "appArmorProfile": {
+      "type": "object",
+      "properties": {
+        "type":             { "type": "string", "enum": ["Localhost", "RuntimeDefault", "Unconfined"] },
+        "localhostProfile": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "windowsSecurityContextOptions": {
+      "type": "object",
+      "properties": {
+        "gmsaCredentialSpec":     { "type": "string" },
+        "gmsaCredentialSpecName": { "type": "string" },
+        "hostProcess":            { "type": "boolean" },
+        "runAsUserName":          { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "securityContext": {
+      "type": "object",
+      "properties": {
+        "allowPrivilegeEscalation": { "type": "boolean" },
+        "appArmorProfile":          { "$ref": "#/$defs/appArmorProfile" },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "add":  { "type": "array", "items": { "type": "string" } },
+            "drop": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "privileged":             { "type": "boolean" },
+        "procMount":              { "type": "string", "enum": ["Default", "Unmasked"] },
+        "readOnlyRootFilesystem": { "type": "boolean" },
+        "runAsGroup":             { "type": "integer" },
+        "runAsNonRoot":           { "type": "boolean" },
+        "runAsUser":              { "type": "integer" },
+        "seLinuxOptions":         { "$ref": "#/$defs/seLinuxOptions" },
+        "seccompProfile":         { "$ref": "#/$defs/seccompProfile" },
+        "windowsOptions":         { "$ref": "#/$defs/windowsSecurityContextOptions" }
+      },
+      "additionalProperties": false
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "appArmorProfile":          { "$ref": "#/$defs/appArmorProfile" },
+        "fsGroup":                  { "type": "integer" },
+        "fsGroupChangePolicy":      { "type": "string", "enum": ["Always", "OnRootMismatch"] },
+        "runAsGroup":               { "type": "integer" },
+        "runAsNonRoot":             { "type": "boolean" },
+        "runAsUser":                { "type": "integer" },
+        "seLinuxChangePolicy":      { "type": "string" },
+        "seLinuxOptions":           { "$ref": "#/$defs/seLinuxOptions" },
+        "seccompProfile":           { "$ref": "#/$defs/seccompProfile" },
+        "supplementalGroups":       { "type": "array", "items": { "type": "integer" } },
+        "supplementalGroupsPolicy": { "type": "string", "enum": ["Merge", "Strict"] },
+        "sysctls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name":  { "type": "string" },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"],
+            "additionalProperties": false
+          }
+        },
+        "windowsOptions": { "$ref": "#/$defs/windowsSecurityContextOptions" }
+      },
+      "additionalProperties": false
+    },
+    "lifecycleHandler": {
+      "type": "object",
+      "properties": {
+        "exec": {
+          "type": "object",
+          "properties": { "command": { "$ref": "#/$defs/stringList" } },
+          "additionalProperties": false
+        },
+        "httpGet": {
+          "type": "object",
+          "properties": {
+            "host":        { "type": "string" },
+            "httpHeaders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name":  { "type": "string" },
+                  "value": { "type": "string" }
+                },
+                "required": ["name", "value"],
+                "additionalProperties": false
+              }
+            },
+            "path":   { "type": "string" },
+            "port":   { "oneOf": [{ "type": "string" }, { "type": "integer" }] },
+            "scheme": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "sleep": {
+          "type": "object",
+          "properties": { "seconds": { "type": "integer" } },
+          "additionalProperties": false
+        },
+        "tcpSocket": {
+          "type": "object",
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "oneOf": [{ "type": "string" }, { "type": "integer" }] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "lifecycle": {
+      "type": "object",
+      "properties": {
+        "postStart": { "$ref": "#/$defs/lifecycleHandler" },
+        "preStop":   { "$ref": "#/$defs/lifecycleHandler" },
+        "stopSignal": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "envVar": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name":  { "type": "string" },
+          "value": { "type": "string" },
+          "valueFrom": {
+            "type": "object",
+            "properties": {
+              "configMapKeyRef": {
+                "type": "object",
+                "required": ["key"],
+                "properties": {
+                  "name":     { "type": "string" },
+                  "key":      { "type": "string" },
+                  "optional": { "type": "boolean" }
+                },
+                "additionalProperties": false
+              },
+              "secretKeyRef": {
+                "type": "object",
+                "required": ["key"],
+                "properties": {
+                  "name":     { "type": "string" },
+                  "key":      { "type": "string" },
+                  "optional": { "type": "boolean" }
+                },
+                "additionalProperties": false
+              },
+              "fieldRef": {
+                "type": "object",
+                "required": ["fieldPath"],
+                "properties": {
+                  "apiVersion": { "type": "string" },
+                  "fieldPath":  { "type": "string" }
+                },
+                "additionalProperties": false
+              },
+              "resourceFieldRef": {
+                "type": "object",
+                "required": ["resource"],
+                "properties": {
+                  "containerName": { "type": "string" },
+                  "divisor":       { "oneOf": [{ "type": "string" }, { "type": "integer" }] },
+                  "resource":      { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "envFrom": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "prefix": { "type": "string" },
+          "configMapRef": {
+            "type": "object",
+            "properties": {
+              "name":     { "type": "string" },
+              "optional": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          },
+          "secretRef": {
+            "type": "object",
+            "properties": {
+              "name":     { "type": "string" },
+              "optional": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "volume": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name":                    { "type": "string" },
+          "configMap":               { "type": "object", "additionalProperties": true },
+          "secret":                  { "type": "object", "additionalProperties": true },
+          "emptyDir":                { "type": "object", "additionalProperties": true },
+          "hostPath":                { "type": "object", "additionalProperties": true },
+          "persistentVolumeClaim":   { "type": "object", "additionalProperties": true },
+          "projected":               { "type": "object", "additionalProperties": true },
+          "csi":                     { "type": "object", "additionalProperties": true },
+          "downwardAPI":             { "type": "object", "additionalProperties": true },
+          "nfs":                     { "type": "object", "additionalProperties": true },
+          "iscsi":                   { "type": "object", "additionalProperties": true },
+          "ephemeral":               { "type": "object", "additionalProperties": true },
+          "image":                   { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      }
+    },
+    "volumeMount": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "mountPath"],
+        "properties": {
+          "name":              { "type": "string" },
+          "mountPath":         { "type": "string" },
+          "subPath":           { "type": "string" },
+          "subPathExpr":       { "type": "string" },
+          "readOnly":          { "type": "boolean" },
+          "mountPropagation":  { "type": "string", "enum": ["Bidirectional", "HostToContainer", "None"] },
+          "recursiveReadOnly": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "container": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "toleration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key":               { "type": "string" },
+          "operator":          { "type": "string", "enum": ["Equal", "Exists"] },
+          "value":             { "type": "string" },
+          "effect":            { "type": "string", "enum": ["NoExecute", "NoSchedule", "PreferNoSchedule"] },
+          "tolerationSeconds": { "type": "integer" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "affinity": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "imagePullSecret": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {"name": {"type": "string"}}
+      }
+    },
+    "networkPolicyPort": {
+      "type": "object",
+      "properties": {
+        "port": { "oneOf": [{"type": "string"}, {"type": "integer"}] },
+        "protocol": { "type": "string" },
+        "endPort": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "networkPolicyPeer": {
+      "type": "object",
+      "properties": {
+        "podSelector": { "type": "object", "additionalProperties": true },
+        "namespaceSelector": { "type": "object", "additionalProperties": true },
+        "ipBlock": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": true
+    },
+    "networkPolicyIngressRule": {
+      "type": "object",
+      "properties": {
+        "from": { "type": "array", "items": { "$ref": "#/$defs/networkPolicyPeer" } },
+        "ports": { "type": "array", "items": { "$ref": "#/$defs/networkPolicyPort" } }
+      },
+      "additionalProperties": true
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "ingress": { "type": "array", "items": { "$ref": "#/$defs/networkPolicyIngressRule" } }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] },
+        "clusterIP": { "type": "string" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "ports": {
+          "type": "object",
+          "properties": {
+            "grpc": { "type": "integer" },
+            "health": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "host": { "type": "string" },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "secretName": { "type": "string" }
+          }
+        }
+      }
+    },
+    "parentRef": {
+      "type": "object",
+      "properties": {
+        "group": { "type": "string" },
+        "kind": { "type": "string" },
+        "name": { "type": "string" },
+        "namespace": { "type": "string" },
+        "sectionName": { "type": "string" },
+        "port": { "type": "integer" }
+      },
+      "description": "Gateway API ParentRef. See https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParentReference"
+    },
+    "gatewayRoute": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "annotations": { "$ref": "#/$defs/metaMap" },
+        "labels": { "$ref": "#/$defs/metaMap" },
+        "parentRefs": { "type": "array", "items": { "$ref": "#/$defs/parentRef" } },
+        "hostnames": { "$ref": "#/$defs/stringList" }
+      },
+      "description": "Gateway API route. See https://gateway-api.sigs.k8s.io/reference/spec/"
+    }
+  }
+}
