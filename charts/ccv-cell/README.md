@@ -163,7 +163,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | aggregator.image.registry | string | `""` | OCI registry, overrides `global.image.registry` when set. |
 | aggregator.image.repository | string | `"chainlink/chainlink-ccv-aggregator"` | Image repository. |
-| aggregator.image.tag | string | `"v0.10.1"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
+| aggregator.image.tag | string | `"v0.11.0"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
 | aggregator.ingress.annotations | object | `{}` | Annotations to add to the Ingress (e.g. controller-specific TLS/HTTP2 or gRPC wiring). |
 | aggregator.ingress.className | string | `""` | Ingress class name. See [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/).    Make sure that the endpoint is served under TLS with HTTP/2 end-to-end and with gRPC support. Some controllers    require annotations, while others support it out of the box. |
 | aggregator.ingress.enabled | bool | `false` | Enable an Ingress for the aggregator gRPC endpoint. |
@@ -291,7 +291,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. See [imagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy). |
 | verifier.image.registry | string | `""` | OCI registry; overrides `global.image.registry` when set. |
 | verifier.image.repository | string | `"chainlink/chainlink-ccv-verifier"` | Image repository. |
-| verifier.image.tag | string | `"v0.10.1"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
+| verifier.image.tag | string | `"v0.11.0"` | Image tag. Mutually exclusive with `digest`.    All tags in the default repository are immutable. |
 | verifier.labels | object | `{}` | Labels to add to the verifier Deployment object. |
 | verifier.lifecycle | object | `{}` | Container lifecycle hooks (postStart / preStop). See [lifecycle](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/). |
 | verifier.livenessProbe | object | `{"failureThreshold":10,"httpGet":{"path":"/health","port":"bootstrap-info"},"initialDelaySeconds":15,"periodSeconds":15}` | Liveness probe for the verifier container. See [probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |
