@@ -34,6 +34,9 @@ and fail CI!
 The [`ccv-cell` helm chart](./charts/ccv-cell) is released on tag pushes that follow the `v*` pattern. The version in
 `Chart.yaml` is overridden by CI using the git tag provided.
 
+Custom release notes can be provided by writing up a `charts/ccv-cell/changelogs/<version>.md` file before setting the
+tag.
+
 To trigger a release, simply push release tags like so:
 ```shell
 newVersion=v9.8.7  # the version being released
