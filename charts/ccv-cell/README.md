@@ -19,6 +19,9 @@ Consult the [Values](#values) section bellow, or the [`values.yaml` file](./valu
 options. Also check the [Requirements](#requirements) section bellow for what you need to configure beforehand.
 You may also read the [runbook](../../RUNBOOK.md) for a small guide.
 
+Note that, while the chart does have and validate a JSON Schema, properties at the root beginning with `x-` are ignored,
+allowing you to use them for YAML anchors and aliases. The runbook has an example of this.
+
 **Homepage:** <https://github.com/smartcontractkit/chainlink-ccv-starter-kit>
 
 ## Source Code
