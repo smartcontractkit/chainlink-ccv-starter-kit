@@ -8,6 +8,10 @@ signs results, and sends them to an aggregator. The aggregator checks signed res
 cells form a **committee**; each cell's Postgres/secrets/KMS isolation requirements are in the chart's
 [Requirements](charts/ccv-cell/README.md#requirements).
 
+Looking for how to deploy the on-chain contracts necessary for a CCV Cell? [Look here!
+](https://github.com/smartcontractkit/chainlink-ccv-starter-kit-contracts) The contracts will require the hostnames,
+signers addresses and chains configured in your committee's cells.
+
 ## Table of Contents
 
 - [1. Prerequisites](#1-prerequisites)
@@ -770,4 +774,3 @@ If you're building SLOs on top of these metrics, three starting points:
   at zero.
 
 Actual SLO targets are your own business decision, not something this guide can set for you.
-
