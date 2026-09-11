@@ -770,4 +770,3 @@ If you're building SLOs on top of these metrics, three starting points:
   at zero.
 
 Actual SLO targets are your own business decision, not something this guide can set for you.
-
