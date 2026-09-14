@@ -19,7 +19,7 @@ services:
       retries: 30
 
   aggregator:
-    image: public.ecr.aws/chainlink/chainlink-ccv-aggregator:v0.6.0
+    image: public.ecr.aws/chainlink/chainlink-ccv-aggregator:v4.4.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +39,7 @@ services:
       retries: 30
 
   verifier:
-    image: public.ecr.aws/chainlink/chainlink-ccv-verifier:v0.6.0
+    image: public.ecr.aws/chainlink/chainlink-ccv-verifier:v4.4.4
     # Restart on a cold-boot DB race: on the first boot the verifier can panic while writing its
     # keystore before Postgres is fully ready. on-failure lets it recover on the next attempt.
     restart: on-failure
