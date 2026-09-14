@@ -22,6 +22,7 @@ permissions:
 env:
   LABEL: "ci=helm-ccv-cell-image-bump"
   VALUES: charts/ccv-cell/values.yaml
+  COMPOSE: local/docker-compose.yaml
   VERSION: ${{ github.event.client_payload.tag || inputs.version }}
 
 jobs:
@@ -60,16 +61,19 @@ jobs:
           sed -i "/^verifier:/,\$ s/tag: .*/tag: \"${VERSION}\"/"             "$VALUES"
           helm-docs --chart-search-root charts/ccv-cell --template-files README.md.gotmpl
 
+          sed -i "s|\(chainlink-ccv-aggregator:\)v[0-9][0-9.]*|\1${VERSION}|" "$COMPOSE"
+          sed -i "s|\(chainlink-ccv-verifier:\)v[0-9][0-9.]*|\1${VERSION}|"   "$COMPOSE"
+
           branch="helm-ccv-cell-image-bump/${VERSION}-${{ github.run_id }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git add "$VALUES" charts/ccv-cell/README.md
+          git add "$VALUES" charts/ccv-cell/README.md "$COMPOSE"
           git commit -m "bump ccv images to ${VERSION}"
           git push origin "$branch"
 
           gh pr create \
             --title "Bump ccv images to ${VERSION}" \
-            --body "Bumps aggregator and verifier image tags to \`${VERSION}\`." \
+            --body "Bumps aggregator and verifier image tags to \`${VERSION}\` in the Helm chart and local docker-compose setup." \
             --label "$LABEL" \
             --head "$branch"
