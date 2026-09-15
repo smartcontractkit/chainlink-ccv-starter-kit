@@ -17,31 +17,40 @@ permissions:
 env:
   VERSION: ${{ github.event.client_payload.tag || inputs.version }}
   DEST: us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/ccv-cell
-  ANNOTATION: "index:com.googleapis.cloudmarketplace.product.service.name=services/chainlink-ccv-starter-kit.endpoints.chainlink-labs-ltd-public.cloud.goog"
+  ANNOTATION_KEY: "com.googleapis.cloudmarketplace.product.service.name"
+  ANNOTATION_VALUE: "services/chainlink-ccv-starter-kit.endpoints.chainlink-labs-ltd-public.cloud.goog"
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate version format
+        run: |
+          if ! [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: VERSION '${VERSION}' is not valid SemVer without v prefix (e.g. 1.2.3)"
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           project_id: chainlink-labs-ltd-public
           workload_identity_provider: projects/748463247428/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
-      - run: |
-          set -euo pipefail
+      - name: Setup crane
+        env:
+          CRANE_VERSION: "v0.22.1"
+        run: |
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" \
+            | tar xz -C /usr/local/bin crane
 
-          docker buildx build -f marketplace/gcp/Dockerfile \
-            --platform linux/amd64 \
-            --build-arg TAG="${VERSION}" \
-            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base:latest" \
-            --annotation "$ANNOTATION" -t "${DEST}/deployer:${VERSION}" --push .
-
-      - run: |
+      - name: Build and push component images
+        run: |
           set -euo pipefail
 
           values=marketplace/gcp/data-test/chart-overlay/values.yaml
@@ -54,6 +63,31 @@ jobs:
 
             printf 'FROM %s' "$fullImageName" | docker buildx build \
               --platform linux/amd64,linux/arm64 \
-              --annotation "$ANNOTATION" \
+              --annotation "index:${ANNOTATION_KEY}=${ANNOTATION_VALUE}" \
               --tag "${DEST}/${image}:${VERSION}" --push -
+          done
+
+      - name: Build and push deployer
+        run: |
+          set -euo pipefail
+
+          docker buildx build -f marketplace/gcp/Dockerfile \
+            --platform linux/amd64 \
+            --provenance=false --sbom=false \
+            --build-arg TAG="${VERSION}" \
+            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base:latest" \
+            --load -t "${DEST}/deployer:${VERSION}" .
+          docker push "${DEST}/deployer:${VERSION}"
+          crane mutate "${DEST}/deployer:${VERSION}" \
+            --annotation "${ANNOTATION_KEY}=${ANNOTATION_VALUE}" \
+            --tag "${DEST}/deployer:${VERSION}"
+
+      - name: Push track tags
+        run: |
+          set -euo pipefail
+
+          TRACK="${VERSION%.*}"
+          crane tag "${DEST}/deployer:${VERSION}" "${TRACK}"
+          for image in postgres curl; do
+            crane tag "${DEST}/${image}:${VERSION}" "${TRACK}"
           done
