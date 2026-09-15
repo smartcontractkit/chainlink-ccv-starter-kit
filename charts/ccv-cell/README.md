@@ -15,8 +15,8 @@ helm install my-ccv-cell oci://public.ecr.aws/chainlink/helm/ccv-cell --version 
 Available versions are listed under [Releases](https://github.com/smartcontractkit/chainlink-ccv-starter-kit/releases) and
 as [git tags](https://github.com/smartcontractkit/chainlink-ccv-starter-kit/tags), without the prefix `v`.
 
-Consult the [Values](#values) section bellow, or the [`values.yaml` file](./values.yaml) to see available configuration
-options. Also check the [Requirements](#requirements) section bellow for what you need to configure beforehand.
+Consult the [Values](#values) section below, or the [`values.yaml` file](./values.yaml) to see available configuration
+options. Also check the [Requirements](#requirements) section below for what you need to configure beforehand.
 You may also read the [runbook](../../RUNBOOK.md) for a small guide.
 
 Note that, while the chart does have and validate a JSON Schema, properties at the root beginning with `x-` are ignored,
@@ -235,7 +235,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | aggregator.service.ports.health | int | `8080` | Port for the health endpoint. |
 | aggregator.service.type | string | `"ClusterIP"` | Service type. See [Service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
 | aggregator.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `aggregator.secrets.app.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `aggregator.secrets.app.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secret.    For Azure Workload Identity (required by `aggregator.secrets.app.azureKeyVault` with `usePodIdentity: false`),    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID. |
-| aggregator.serviceAccount.automountServiceAccountToken | bool | `false` | Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).    By default, not needed, since this application doesn't use the Kuberentes API. |
+| aggregator.serviceAccount.automountServiceAccountToken | bool | `false` | Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).    By default, not needed, since this application doesn't use the Kubernetes API. |
 | aggregator.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the aggregator. |
 | aggregator.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | aggregator.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |
@@ -416,7 +416,7 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.secrets.evm.labels | object | `{}` | Labels to add to the verifier evm Secret. |
 | verifier.secrets.evm.type | string | `"values"` | Provisioning strategy: the default, `values`, uses .verifier.evm.config to render this as a simple ConfigMap.    However, it's common for RPC endpoints to be secrets. In that case, use one of `externalSecret`, `existingSecret`, `gcpSecretStore`,    `awsSecretStore`, or `azureKeyVault` to configure this as a secret instead. |
 | verifier.serviceAccount.annotations | object | `{}` | Annotations to add to the ServiceAccount.    For GKE Workload Identity Federation (required by `verifier.secrets.*.gcpSecretStore`),    set `iam.gke.io/gcp-service-account` to the Google service account bound to this KSA.    For AWS IRSA (required by `verifier.secrets.*.awsSecretStore` with `usePodIdentity: false`),    set `eks.amazonaws.com/role-arn` to the IAM role ARN that can read the secrets.    For Azure Workload Identity (required by `verifier.secrets.*.azureKeyVault` with `usePodIdentity: false`),    set `azure.workload.identity/client-id` to the Azure AD application or managed identity client ID. |
-| verifier.serviceAccount.automountServiceAccountToken | bool | `false` | Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).    By default, not needed, since this application doesn't use the Kuberentes API. |
+| verifier.serviceAccount.automountServiceAccountToken | bool | `false` | Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).    By default, not needed, since this application doesn't use the Kubernetes API. |
 | verifier.serviceAccount.create | bool | `true` | Create a dedicated ServiceAccount for the verifier, usually used for OIDC auth with your cloud provider. |
 | verifier.serviceAccount.labels | object | `{}` | Labels to add to the ServiceAccount. |
 | verifier.serviceAccount.name | string | `""` | Use an existing ServiceAccount instead of creating one; ignored when `create` is true. |

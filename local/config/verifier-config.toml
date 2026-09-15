@@ -2,7 +2,7 @@
 # https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/verifier/committee/config.documented.toml
 
 verifier_id = "committee-verifier-1"
-signer_address = "0x407ac788a176C3C752cb0052cfc3fEA5Bd7307F2"
+signer_address = "auto"
 message_disablement_rules_poll_interval = "2s"
 message_disablement_rules_client_timeout = "500ms"
 disable_finality_checkers = []
@@ -17,7 +17,7 @@ disable_finality_checkers = []
   16015286601757825753 = "0xD5C448Fc5B81EFd3108656Ce5FF9bacF2b582bdB"
 
 [on_ramp_addresses]
-  16015286601757825753 = "0xA94E45744553F4B2bea9DfB8979a02962B980732"
+  16015286601757825753 = "0x8dcf17f298c881A547D91ca4aA3C2AD7568C6777"
 
-[rmn_remote_addresses]
-  16015286601757825753 = "0xACD1e9A75cA486c6883BC5835a022536fA67fCbF"
+# rmn_remote_addresses is optional: the verifier derives the RMN Remote from the
+# OnRamp's on-chain static config, so it is left unset here.

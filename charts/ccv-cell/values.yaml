@@ -388,7 +388,7 @@ aggregator:
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
     name: ""
     # -- Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).
-    #    By default, not needed, since this application doesn't use the Kuberentes API.
+    #    By default, not needed, since this application doesn't use the Kubernetes API.
     automountServiceAccountToken: false
 
   # -- Annotations to add to the aggregator Deployment object.
@@ -1183,7 +1183,7 @@ verifier:
     # -- Use an existing ServiceAccount instead of creating one; ignored when `create` is true.
     name: ""
     # -- Mount the service account token into pods. See [automountServiceAccountToken](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting).
-    #    By default, not needed, since this application doesn't use the Kuberentes API.
+    #    By default, not needed, since this application doesn't use the Kubernetes API.
     automountServiceAccountToken: false
 
   # -- Annotations to add to the verifier Deployment object.
