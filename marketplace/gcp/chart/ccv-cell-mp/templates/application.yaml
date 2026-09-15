@@ -25,8 +25,18 @@ spec:
       kind: Service
     - group: apps/v1
       kind: StatefulSet
+    {{- $csi := false }}
+    {{- range $component := list $sub.Values.aggregator $sub.Values.verifier }}
+      {{- range $secret := values $component.secrets }}
+        {{- if (list "gcpSecretStore" "awsSecretStore" "azureKeyVault") | has $secret.type }}
+          {{- $csi = true }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if $csi }}
     - group: secrets-store.csi.x-k8s.io
       kind: SecretProviderClass
+    {{- end }}
     {{- if .Values.grpcRoute.enabled }}
     - group: gateway.networking.k8s.io
       kind: GRPCRoute
