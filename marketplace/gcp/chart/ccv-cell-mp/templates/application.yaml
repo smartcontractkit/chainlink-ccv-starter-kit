@@ -25,7 +25,9 @@ spec:
       kind: Service
     - group: apps/v1
       kind: StatefulSet
-    - group: gateway.networking.k8s.io
-      kind: GRPCRoute
     - group: secrets-store.csi.x-k8s.io
       kind: SecretProviderClass
+    {{- if .Values.grpcRoute.enabled }}
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+    {{- end }}
