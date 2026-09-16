@@ -23,7 +23,7 @@ charts/ccv-cell/              the chart operators install
   values.schema.json          validation, enforced at install time
   README.md.gotmpl            hand-written wrapper around the generated docs
   README.md                   GENERATED, do not edit
-  templates/{aggregator,verifier}/
+  templates/{aggregator,verifier}/   K8s manifests, one dir per component
   changelogs/<version>.md     optional release notes, read by the release workflow
 RUNBOOK.md                    the operator guide, ordered by deploy sequence
 local/                        docker-compose stack for local testing, not production
