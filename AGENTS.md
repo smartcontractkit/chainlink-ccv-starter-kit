@@ -52,17 +52,18 @@ broken.
 (otherwise it is absent from the generated docs), and an entry in `values.schema.json`. A key missing from
 the schema makes `helm template` fail, which is the single most common bug in this chart.
 
-**Adding an integer key under a `config:` tree means a fourth edit.** The config trees are rendered to TOML
-with `toToml`, which emits whole numbers as floats (`9988.0`), and the application's strict TOML decoder
-rejects that for integer fields. The workaround is `ccv-cell.castInts` in
-[`templates/_helpers.tpl`](charts/ccv-cell/templates/_helpers.tpl), which takes an **explicit list of key
-names** and is called from `templates/aggregator/configmap.yaml` and `templates/verifier/configmap.yaml`.
-A new integer key that is not added to the relevant call site renders as a float, passes CI, and fails at
-container start.
+**Adding an integer key under a `config:` tree means a fourth edit.** The config trees are rendered to
+TOML with `toToml`, which emits whole numbers as floats (`9988.0`), and the application's strict TOML
+decoder rejects that for integer fields. The workaround is `ccv-cell.castInts` in
+[`templates/_helpers.tpl`](charts/ccv-cell/templates/_helpers.tpl), called separately per config subtree in
+`templates/{aggregator,verifier}/configmap.yaml`; find the call for your key's subtree and add the key
+there. A key inside a list of objects, for example `committee.quorumConfigs[].threshold`, needs a manual
+`range` + `set ... int64` instead, since `castInts` only works on flat maps. A new integer key left uncast
+renders as a float, passes CI, and fails at container start.
 
 **Most application config changes need no chart change at all.** Anything nested under a component's
-`config:` key is passed through `toToml` and becomes the application's TOML config verbatim. Only
-structural changes need chart work, for example exposing a new port.
+`config:` key is passed through `toToml` and becomes the application's TOML config verbatim. Integer keys
+(as above) and structural changes, for example exposing a new port, both need chart work.
 
 **Schema properties at the root beginning with `x-` are ignored on purpose.** That is the escape hatch that
 lets operators define YAML anchors at the top of their values file. Do not "fix" it. See RUNBOOK section 8.
