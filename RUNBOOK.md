@@ -48,14 +48,14 @@ the chart provided `values.yaml`. You can then follow along the original file, a
 Every value accompanies a small snippet documentation, commented out example, or helper link.
 
 We do not recommend you copy the entire file, since you'll have to maintain all values, specially across
-updates, making maitenance difficult.
+updates, making maintenance difficult.
 
 We'll detail here the "important bits" to watch out for.
 
 ### Configs
 
 A minimal values file that renders and starts cleanly, with placeholder addresses, `existingSecret`s, and one fake
-chain (see bellow for the secrets). Swap in real addresses and RPC URLs before trusting it beyond a smoke test:
+chain (see below for the secrets). Swap in real addresses and RPC URLs before trusting it beyond a smoke test:
 
 ```yaml
 aggregator:
@@ -70,7 +70,7 @@ aggregator:
           sourceVerifierAddress: "0x00000000000000000000000000000000000000a1"
           threshold: 1
           signers:
-            # Your first signer will be your own address, see bellow
+            # Your first signer will be your own address, see below
             - address: "0x00000000000000000000000000000000000000b1"
       destinationVerifiers:
         "2": "0x00000000000000000000000000000000000000c2"
@@ -83,7 +83,7 @@ aggregator:
 verifier:
   config:
     verifier_id: "committee-verifier-1"
-    signer_address: "auto"  # See bellow how to find this address for use above
+    signer_address: "auto"  # See below how to find this address for use above
     aggregators:
       - name: aggregator-1
         secret_name: aggregator_1
@@ -113,7 +113,7 @@ verifier:
         name: verifier-bootstrap-secret
 ```
 
-The configs here map almost directly to the Verifier's and Aggregators settings, see their links for for info.
+The configs here map almost directly to the Verifier's and Aggregators settings, see their links for info.
 Some changes include `useInClusterAggregator: true`, where the chart automatically configures the aggregator that is
 also deployed in this chart for the verifier, sparing you from wiring it yourself. Read the values' documentation
 for more info as you go.
