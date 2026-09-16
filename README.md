@@ -1,5 +1,15 @@
 # chainlink-ccv-starter-kit
-Starterkit for the Chainlink CCV
+Starter Kit for Chainlink Cross-Chain Verifiers (CCVs)
+
+> **Note**
+>
+> _This repository provides deployment tooling for a Chainlink CCIP Cross-Chain Verifier cell (a single verifier paired with a single aggregator), including Helm charts, infrastructure-as-code, operator runbooks, and monitoring dashboards. It has not been independently audited by a third-party security firm. It is provided "AS IS" and "AS AVAILABLE", without warranties of any kind, and is not a substitute for your own security review. You are responsible for adapting it to your own infrastructure, following the minimum sizing and operational recommendations in the runbooks, and for reviewing, testing, configuring, and auditing your deployment before production use. Neither Chainlink Labs, the Chainlink Foundation, nor Chainlink node operators are responsible for any losses or unintended outcomes arising from its use._
+
+CLI (`cct-solana-tx`) that builds, simulates, and Base58-encodes Solana CCIP token-pool admin
+transactions for execution through a Squads multisig. It does not sign or send by default — the
+encoded output is imported into Squads. `--execute` signs and sends with a local keypair (EOA), and
+the read-only commands (`get-state`, `get-chain-config`, `inspect-token`, `derive-accounts`) fetch
+and display on-chain state instead of producing a transaction.
 
 ## Deploying a CCV Cell
 
