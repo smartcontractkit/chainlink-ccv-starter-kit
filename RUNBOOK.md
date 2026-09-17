@@ -37,6 +37,11 @@ signers addresses and chains configured in your committee's cells.
   [evm](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/evm/config.documented.toml).
   Field names match the chart's `*.config` keys _almost_ 1:1. If you are not sure how to convert, simply write the
   original TOML file, convert it drop the result under the matching `*.config` key.
+- RPC endpoints: the verifier reads each chain it serves as a message source (`evm.config.chains`) — polling
+  logs and validating source-chain finality — so every configured chain needs a reliable RPC. Use providers
+  that meet the Chainlink [RPC node requirements](https://docs.chain.link/resources/network-integration)
+  (multiple independent providers, an archive node, sustained throughput and low latency). You can list several
+  nodes per chain with an `order` for failover; see [§5](#5-if-a-pod-wont-start) if you hit RPC timeouts or 429s.
 
 ## 2. Configure the Values
 
