@@ -980,10 +980,18 @@ verifier:
       keystoreBackend: postgres
 
       kms:
-        # -- AWS KMS key ID for the ECDSA key (only when `keystoreBackend` is `kms`).
-        ecdsaKeyId: ""  # "arn:aws:kms:us-east-1:...:key/abc123-..."
-        # -- AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`).
-        ed25519KeyId: ""  # "arn:aws:kms:us-east-1:...:key/def456-..."
+        # -- Cloud KMS provider: `aws` or `gcp`. Required when `keystoreBackend` is `kms`.
+        provider: ""
+        # -- KMS key for the ECDSA (secp256k1) signing key. Required when `keystoreBackend` is `kms`.
+        #    AWS: a Key ID or ARN. GCP: a CryptoKeyVersion resource name
+        #    (`projects/<p>/locations/<l>/keyRings/<r>/cryptoKeys/<k>/cryptoKeyVersions/<n>`).
+        #    Scope the workload's credentials to exactly this key. See
+        #    [KeystoreConfig](https://github.com/smartcontractkit/chainlink-ccv/blob/main/bootstrap/config.go)
+        #    for the per-cloud IAM guidance.
+        ecdsaKeyId: ""
+        # -- KMS key for the Ed25519 (CSA) key, same format as `ecdsaKeyId`. Only needed when running
+        #    against a Job Distributor. Leave empty for this chart, which runs `local_app_config`.
+        ed25519KeyId: ""
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.

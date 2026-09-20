@@ -355,8 +355,9 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 | verifier.secrets.bootstrap.gcpSecretStore.secretProviderClass.name | string | `""` | Name of the SecretProviderClass resource to create. |
 | verifier.secrets.bootstrap.gcpSecretStore.secretVersionResourceName | string | `""` | Fully-qualified GCP Secret Manager secret version resource name, e.g. `projects/<project>/secrets/<secret>/versions/latest`. |
 | verifier.secrets.bootstrap.keystoreBackend | string | `"postgres"` | Keystore backend: `postgres` or `kms`. |
-| verifier.secrets.bootstrap.kms.ecdsaKeyId | string | `""` | AWS KMS key ID for the ECDSA key (only when `keystoreBackend` is `kms`). |
-| verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | AWS KMS key ID for the Ed25519 key (only when `keystoreBackend` is `kms`). |
+| verifier.secrets.bootstrap.kms.ecdsaKeyId | string | `""` | KMS key for the ECDSA (secp256k1) signing key. Required when `keystoreBackend` is `kms`.    AWS: a Key ID or ARN. GCP: a CryptoKeyVersion resource name    (`projects/<p>/locations/<l>/keyRings/<r>/cryptoKeys/<k>/cryptoKeyVersions/<n>`).    Scope the workload's credentials to exactly this key. See    [KeystoreConfig](https://github.com/smartcontractkit/chainlink-ccv/blob/main/bootstrap/config.go)    for the per-cloud IAM guidance. |
+| verifier.secrets.bootstrap.kms.ed25519KeyId | string | `""` | KMS key for the Ed25519 (CSA) key, same format as `ecdsaKeyId`. Only needed when running    against a Job Distributor. Leave empty for this chart, which runs `local_app_config`. |
+| verifier.secrets.bootstrap.kms.provider | string | `""` | Cloud KMS provider: `aws` or `gcp`. Required when `keystoreBackend` is `kms`. |
 | verifier.secrets.bootstrap.labels | object | `{}` | Labels to add to the verifier bootstrap Secret. |
 | verifier.secrets.bootstrap.type | string | `"externalSecret"` | Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.    Configure the values below for the chosen type. |
 | verifier.secrets.bootstrapConfig.annotations | object | `{}` | Annotations to add to the verifier bootstrap-config Secret (non-values types only). |

@@ -279,6 +279,7 @@
         "kms": {
           "type": "object",
           "properties": {
+            "provider": { "type": "string", "enum": ["", "aws", "gcp"] },
             "ecdsaKeyId": { "type": "string" },
             "ed25519KeyId": { "type": "string" }
           }
