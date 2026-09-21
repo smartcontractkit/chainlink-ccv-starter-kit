@@ -227,8 +227,7 @@ provider = "gcp"
 ecdsa_key_id = "projects/<p>/locations/<l>/keyRings/<r>/cryptoKeys/<k>/cryptoKeyVersions/1"
 ```
 
-Credentials come from the cloud's default mechanism, never from this file: Workload Identity on GKE, IRSA
-or EKS Pod Identity on AWS. Grant the workload access to **exactly these keys**, never a wildcard.
+Credentials to use KMS come from the cloud's authentication mechanism, see [Service Accounts](#service-accounts) below.
 
 The full reference, including per-cloud IAM guidance, is
 [`secrets.documented.toml`](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/bootstrap/secrets.documented.toml).
