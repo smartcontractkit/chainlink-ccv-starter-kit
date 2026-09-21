@@ -225,8 +225,6 @@ backend = "kms"
 provider = "gcp"
 # AWS: a Key ID or ARN. GCP: a CryptoKeyVersion resource name.
 ecdsa_key_id = "projects/<p>/locations/<l>/keyRings/<r>/cryptoKeys/<k>/cryptoKeyVersions/1"
-# Only needed when running against a Job Distributor; omit for this chart.
-# ed25519_key_id = "..."
 ```
 
 Credentials come from the cloud's default mechanism, never from this file: Workload Identity on GKE, IRSA
