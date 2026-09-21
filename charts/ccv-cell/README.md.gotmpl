@@ -62,6 +62,9 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 - A Key Management Service (KMS) solution:
   - While the application supports holding the signing key in PostgreSQL, this is not recommended for production.
   - Instead, use a managed service for signing.
+  - Configure it with `verifier.secrets.bootstrap.keystoreBackend: kms`, or by writing the `[keystore.kms]`
+    block in `secrets.toml` yourself. See the [runbook](../../RUNBOOK.md#keystore-backend) and
+    [`secrets.documented.toml`](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/bootstrap/secrets.documented.toml).
   - **We strongly recommend that, for production, you configure alerts for unexpected use of this key. Only the ccv-cell
     should be accessing this service.**
 - A Cloud IAM Service Account:
