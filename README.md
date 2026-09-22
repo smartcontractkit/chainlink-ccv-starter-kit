@@ -1,6 +1,11 @@
 # chainlink-ccv-starter-kit
 Starter Kit for Chainlink Cross-Chain Verifiers (CCVs)
 
+> [!NOTE]
+> **Building a Cross-Chain Verifier?** If you have questions about this kit, about operating a CCV, or about
+> getting your verifier onboarded into the CCIP indexer, contact us at
+> [clusersupport@smartcontract.com](mailto:clusersupport@smartcontract.com).
+
 ## Deploying a CCV Cell
 
 See [RUNBOOK.md](RUNBOOK.md) for the operational guide to deploying the [`ccv-cell`](charts/ccv-cell) chart:

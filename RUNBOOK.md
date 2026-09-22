@@ -22,9 +22,10 @@ signers addresses and chains configured in your committee's cells.
 - [6. Upgrades, rollback, scaling](#6-upgrades-rollback-scaling)
 - [7. Committee size recommendations](#7-committee-size-recommendations)
 - [8. Peer information and credential exchange](#8-peer-information-and-credential-exchange)
-- [9. Metrics: deploy an OTel Collector](#9-metrics-deploy-an-otel-collector)
-- [10. Monitoring the cell](#10-monitoring-the-cell)
-- [11. Alerting](#11-alerting)
+- [9. Getting onboarded into the CCIP indexer](#9-getting-onboarded-into-the-ccip-indexer)
+- [10. Metrics: deploy an OTel Collector](#10-metrics-deploy-an-otel-collector)
+- [11. Monitoring the cell](#11-monitoring-the-cell)
+- [12. Alerting](#12-alerting)
 
 ## 1. Prerequisites
 
@@ -518,7 +519,76 @@ verifier:
 > anchors and values as you see fit without affecting the rest of the chart. If you want to see the end result, try
 > `helm template` or `yq 'explode(.)' your-values.yaml`.
 
-## 9. Metrics: deploy an OTel Collector
+## 9. Getting onboarded into the CCIP indexer
+
+Onboarding into the Chainlink indexer is what makes the default executor pick your messages up automatically.
+It is optional: `OffRamp.execute` is permissionless, so a sender can always execute their own messages. It is
+recommended, because without it nobody executes on your behalf.
+
+### 9.1 Meet the committee sizing requirements
+
+Your committee must follow the sizing guidance in
+[Committee size recommendations](#7-committee-size-recommendations). A committee that is undersized or has no
+redundancy will not be onboarded.
+
+### 9.2 Expose each aggregator read endpoint publicly and anonymously
+
+Reachable with no API key and no IP allowlist, over TLS. Standard WAF / DDoS protection in front is fine as
+long as it does not block legitimate public reads.
+
+### 9.3 Keep the read endpoints responsive and reachable
+
+The indexer reads each message's attestations from your aggregators through a resilient client: it retries
+with exponential backoff and trips a circuit breaker on repeated failures, and it keeps re-attempting each
+message for a bounded window before giving up. Redundancy across the endpoints you registered absorbs one
+aggregator being down, but each endpoint still has to meet the bar:
+
+- **Answer each read fast.** Per-request timeout is 10s; after that the reader retries (3 retries, 1s to 10s
+  backoff), and 5 consecutive failures open the circuit breaker for 3s. Target responses well under 10s.
+- **Recover before the retry window closes.** Each message is retried with 1s to 60s backoff for up to 1 hour
+  (the verification visibility window). If all of your aggregators stay unreachable past that window, the
+  indexer marks those messages timed out and stops pulling them, so the default executor will not
+  auto-execute them. The only solution is to manually execute them: the attestations still live in your
+  aggregators, and `OffRamp.execute` is permissionless, so those messages can be self-executed.
+
+### 9.4 Validate your committee by self-executing a message
+
+Do this before requesting onboarding. It proves your cells produce attestations the destination chain
+actually accepts, and it separates a problem in your setup from a problem in the onboarding.
+
+1. Send a message on a lane your committee verifies.
+2. Fetch the aggregated `ccv_data` for that `messageId` from one of your aggregator read endpoints, using the
+   same anonymous read path the indexer uses.
+3. Build and submit the execution with the CCIP SDK: `source.getExecutionInput({ request, verifications })`
+   then `dest.execute({ offRamp, input, wallet })`.
+4. Confirm the message reaches success on the destination chain.
+
+Repeat this against **each** aggregator endpoint you intend to register, not just one. An endpoint that
+serves an incomplete report will pass a casual check and fail under the indexer.
+
+> [!TIP]
+> This is also your recovery procedure. If the indexer ever times a message out, the same steps execute it
+> manually.
+
+### 9.5 Register with CCIP
+
+The indexer does not auto-discover verifiers, so onboarding is manual.
+
+Email [clusersupport@smartcontract.com](mailto:clusersupport@smartcontract.com) with:
+
+- A **display name** for your CCV (required), and optionally a **logo URL**.
+- A **website** and a **primary contact**, for the onboarding and support relationship.
+- Your **resolver contract address** per chain. It is the same address on every chain; how to fix it to that
+  address is explained in the
+  [on-chain kit](https://github.com/smartcontractkit/chainlink-ccv-starter-kit-contracts).
+- Your **aggregator read endpoint URLs, all of them**, since a committee runs several aggregators for
+  redundancy.
+
+> [!IMPORTANT]
+> Re-send the endpoint list whenever you add or remove an aggregator. Domain names must be stable, since
+> registration is keyed on them and a changed hostname breaks it.
+
+## 10. Metrics: deploy an OTel Collector
 
 Both the aggregator and the verifier export metrics over OTLP via Beholder: `aggregator.config.monitoring.Beholder` ·
 `verifier.bootstrap.config.Monitoring.Beholder`.
@@ -610,9 +680,9 @@ Full field reference: the `Beholder` block in the config docs linked under [Prer
 `OTEL_SERVICE_NAME` is the standard OTel env var for naming a service; it's confirmed to work on both the aggregator
 and the verifier.
 
-## 10. Monitoring the cell
+## 11. Monitoring the cell
 
-Once metrics are flowing (see [Metrics: deploy an OTel Collector](#9-metrics-deploy-an-otel-collector)), here's what to actually watch: the health
+Once metrics are flowing (see [Metrics: deploy an OTel Collector](#10-metrics-deploy-an-otel-collector)), here's what to actually watch: the health
 checks wired into the pods, the metrics that matter, and a working example dashboard.
 
 ### Health checks
@@ -641,7 +711,7 @@ The tables below group metrics the same way as the [working example dashboard](#
 |---|---|---|
 | `aggregator_heartbeat_verifier_heartbeat_timestamp` | Last time the aggregator heard a heartbeat from a given verifier (`caller_id`). Watch `time() - <this>`. | Amber past 60s, red past 300s. Stale or absent means that verifier isn't reporting. |
 | `verifier_heartbeat_score` / `aggregator_heartbeat_verifier_score` | A verifier's block-height lag behind its committee, in MADs (Median Absolute Deviations). `1.0` = leading, `2.0` = 1 MAD behind, `4.0` = 3 MADs behind. | Amber past `2.0`, red past `4.0`. |
-| `verifier_local_chain_global_cursed` / `verifier_remote_chain_cursed` | Whether the source chain, or a destination chain, is cursed (RMN). | Informational: a cursed chain causes the committee CCV to drop the message, not get stuck. Replay it once un-cursed; see [Alerting](#11-alerting). |
+| `verifier_local_chain_global_cursed` / `verifier_remote_chain_cursed` | Whether the source chain, or a destination chain, is cursed (RMN). | Informational: a cursed chain causes the committee CCV to drop the message, not get stuck. Replay it once un-cursed; see [Alerting](#12-alerting). |
 
 **Source reader health**
 
@@ -696,7 +766,7 @@ Pipeline & Finality Backlog**, **Verification & Storage Internals**, **Aggregato
 top-10-oldest-pending-messages table, the fastest way to tell one stuck message apart from a lane-wide or
 committee-wide issue).
 
-## 11. Alerting
+## 12. Alerting
 
 > [!NOTE]
 > This is a reference implementation, not a managed service. You run your own on-call, your own AlertManager (or
@@ -704,13 +774,13 @@ committee-wide issue).
 
 ### Alert catalog: page or ticket
 
-For the alerts, "page" means wake someone up _now_, while "ticket" means it can wait for business hours. Both use the metrics and thresholds from [Monitoring the cell](#10-monitoring-the-cell).
+For the alerts, "page" means wake someone up _now_, while "ticket" means it can wait for business hours. Both use the metrics and thresholds from [Monitoring the cell](#11-monitoring-the-cell).
 
 | Alert | Condition | Severity | Why | First action |
 |---|---|---|---|---|
 | Verifier heartbeat stale | `time() - aggregator_heartbeat_verifier_heartbeat_timestamp > 300` | Ticket | That verifier stopped reporting to this aggregator. Only bad if it goes stale on every aggregator the verifier is configured with; one faulty aggregator alone isn't. | ["Confirm Verifier Liveness"](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md#1-confirm-verifier-liveness) |
 | Chain cursed (local or remote) | `verifier_local_chain_global_cursed > 0` or `verifier_remote_chain_cursed > 0` | Ticket | Informational: the message is dropped, not stuck. | This is [RMN's circuit breaker](https://docs.chain.link/ccip/concepts/architecture/offchain/risk-management-network), not a ccv-cell bug. Replay the message once un-cursed. |
-| Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#10-monitoring-the-cell). | See the ["unverified after 15 minutes" runbook](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md). |
+| Message stuck past 15m | `verifier_oldest_message_age_seconds{state="pending_finality"} > 900` | Page | Same 15-minute threshold as [Monitoring the cell](#11-monitoring-the-cell). | See the ["unverified after 15 minutes" runbook](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/runbooks/unverified-message-after-15-minutes.md). |
 | KMS key used by anyone but the verifier | see [Key misuse](#key-misuse-kms) below | Page | Possible key compromise. | Revoke/rotate the key, then investigate the caller. |
 | Heartbeat score degraded | `min by (verifier_id) (verifier_heartbeat_score) > 2` for 10m | Ticket | Verifier is lagging its committee, not yet critical. | - |
 | Source reader in `poll_error` | `verifier_source_reader_state{state="poll_error"} == 1` for 5m | Page | Investigate source RPC health. | - |
