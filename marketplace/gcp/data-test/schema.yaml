@@ -67,6 +67,17 @@ properties:
   grpcRoute.enabled:
     type: boolean
     default: false
+  # Declared with defaults so the production schema's `required:` list is satisfiable from an empty
+  # parameter set. Unused here because the GRPCRoute is switched off.
+  grpcRoute.routeKind:
+    type: string
+    default: GRPCRoute
+  grpcRoute.hostname:
+    type: string
+    default: verify.invalid
+  grpcRoute.parentRefName:
+    type: string
+    default: verify-gateway
 
 required:
   - name

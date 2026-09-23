@@ -29,6 +29,9 @@ signers addresses and chains configured in your committee's cells.
 
 ## 1. Prerequisites
 
+> Deploying from Google Cloud Marketplace instead of `helm`? Start at
+> [marketplace/gcp/README.md](marketplace/gcp/README.md), then come back here from §4 onwards.
+
 - Cluster and infra dependencies (Gateway/Ingress + mesh, Postgres, secrets manager, KMS, Cloud IAM): see the
   chart's [Requirements](charts/ccv-cell/README.md#requirements).
 - Config field reference: `docs/config/` in `chainlink-ccv`:
@@ -119,6 +122,16 @@ verifier:
         name: verifier-bootstrap-secret
 ```
 
+> [!IMPORTANT]
+> `sourceVerifierAddress`, `destinationVerifiers` and `committee_verifier_addresses` all take the **resolver**
+> address, not the verifier implementation behind it. The resolver is the CCV's on-chain identity: it is what
+> a token pool lists, what appears in a message's CCV set, and what stays put while implementations rotate.
+>
+> Getting it wrong is quiet. A pool listing an implementation reverts inside the fee quote with **no revert
+> data**, because the implementation has no `getOutboundImplementation` and no fallback, so a send fails with
+> nothing to decode. A cell configured with an implementation simply never recognises a message as its own,
+> and sits idle with no error at all.
+
 The configs here map almost directly to the Verifier's and Aggregators settings, see their links for info.
 Some changes include `useInClusterAggregator: true`, where the chart automatically configures the aggregator that is
 also deployed in this chart for the verifier, sparing you from wiring it yourself. Read the values' documentation
@@ -193,7 +206,10 @@ Set `type` on each of `aggregator.secrets.app`, `verifier.secrets.app`, `verifie
 - **`externalSecret`** (default): chart creates an `ExternalSecret` that pulls from your `SecretStoreRef` via
   `*RemoteRef` fields (e.g. `storageUrlRemoteRef`, per-client `apiKeyRemoteRef`/`secretKeyRemoteRef`).
 - **`gcpSecretStore`**: chart creates a `SecretProviderClass` pointing at one `secretVersionResourceName` holding a
-  full pre-built `secrets.toml`. Requires Workload Identity on `*.serviceAccount.annotations`.
+  full pre-built `secrets.toml`. Requires Workload Identity Federation on the cluster, granted either way:
+  bind the role directly to the Kubernetes ServiceAccount principal (no annotation needed), or impersonate a
+  Google service account by setting `iam.gke.io/gcp-service-account` in `*.serviceAccount.annotations`.
+  See [Workload Identity for `gcpSecretStore`](#workload-identity-for-gcpsecretstore).
 - **`awsSecretStore`**: chart creates a `SecretProviderClass` using the [AWS ASCP](https://github.com/aws/secrets-store-csi-driver-provider-aws)
   pointing at one `secretName` (name or ARN) in AWS Secrets Manager holding a full pre-built `secrets.toml`.
   Supports both IRSA (annotate the ServiceAccount with `eks.amazonaws.com/role-arn`) and EKS Pod Identity
@@ -315,6 +331,49 @@ Service accounts are used by your cloud to allow access from the pods to Secrets
 Configuring these properly, including name and namespace on the cloud IAM's side, is critical for production use.
 Check the comments and your cloud's documentation for more.
 
+`create: true` has the chart create the account. Leave `name` empty and it is named after the release, or set
+`name` to choose. Either way the account exists only after `helm install`, so see below for granting it access
+beforehand.
+
+`create: false` means something else creates it and passes the name. This is what the GCP Marketplace listing
+does; see [marketplace/gcp/README.md](marketplace/gcp/README.md). Setting `create: false` without an account of
+that name existing leaves the pods unschedulable, with `serviceaccount not found` on the StatefulSet.
+
+#### Cloud KMS access for the `kms` keystore backend
+
+The verifier needs **two** roles on the signing key, not one. `roles/cloudkms.signerVerifier` covers signing
+and public-key reads but not `cloudkms.cryptoKeyVersions.get`, which the verifier calls when loading the key,
+so it also needs `roles/cloudkms.viewer`. With only the first it crash-loops on
+`failed to initialize KMS keystore: ... Permission 'cloudkms.cryptoKeyVersions.get' denied`.
+
+On Google Cloud the required algorithm, `ec-sign-secp256k1-sha256`, exists only at **HSM** protection level.
+Reference the key by its CryptoKeyVersion resource name, ending `/cryptoKeyVersions/<n>`.
+
+With the `kms` backend the bootstrap secret needs no `[db]` and no `[keystore] password`, so a cell needs
+two logical databases (`verifier`, `aggregator`) rather than three. Note that the chart's `externalSecret`
+path writes a `[db] url` into the bootstrap secret on every backend, so on that path supply one regardless.
+
+#### Workload Identity for `gcpSecretStore`
+
+Google supports two bindings, and only the second needs an annotation.
+
+**Direct binding to the ServiceAccount principal** is the current recommendation and needs no Google service
+account and no annotation. Grant per secret, so each component reads only what it needs:
+
+```bash
+gcloud secrets add-iam-policy-binding <secret-name> \
+  --project=<project-id> \
+  --role=roles/secretmanager.secretAccessor \
+  --member="principal://iam.googleapis.com/projects/<project-number>/locations/global/workloadIdentityPools/<project-id>.svc.id.goog/subject/ns/<namespace>/sa/<ksa-name>"
+```
+
+**Impersonating a Google service account** is the older route: grant the roles to that account, then annotate
+the Kubernetes ServiceAccount with `iam.gke.io/gcp-service-account`. Both halves are required.
+
+Prefer the direct binding. The member is just a string, so the binding can be created **before** the
+ServiceAccount exists, and the cell comes up on the first attempt instead of waiting in
+`ContainerCreating` until access is granted.
+
 ### Policy Hooks
 
 The Verifier supports [policy hooks](https://github.com/smartcontractkit/chainlink-ccv/blob/main/verifier/docs/policy_hook.md).
@@ -401,7 +460,7 @@ Verifier healthy:
 | Aggregator crash-loops, log mentions committee/quorum        | `committee.quorumConfigs` or `destinationVerifiers` is empty.                                                                                                 |
 | Verifier crash-loops: `no enabled/initialized chain sources` | `committee_verifier_addresses`/`on_ramp_addresses` aren't both set for the same chain, or `evm.config.chains` is missing that chain.                          |
 | `helm install` fails: `... but no apiKeyRemoteRef`           | A `clients[]`/`aggregators[]` entry is missing its remote-ref while using `externalSecret`.                                                                   |
-| CSI mount errors (`gcpSecretStore`)                          | GKE Secret Manager add-on not enabled, or Workload Identity not wired on the ServiceAccount.                                                                  |
+| Pod stuck `ContainerCreating`, no logs, `kubectl describe` shows `FailedMount` / `PermissionDenied` (`gcpSecretStore`) | GKE Secret Manager add-on not enabled, or the ServiceAccount has no Secret Manager access. Unlike the rows above the container never starts, so there is nothing in the logs. The CSI driver retries, and the pod starts on its own once access is granted. |
 | CSI mount errors (`awsSecretStore`)                          | ASCP not installed, IAM role missing `secretsmanager:GetSecretValue`/`DescribeSecret`, or IRSA/Pod Identity not wired on the ServiceAccount.                  |
 | Verifier logs show RPC timeouts/429s                         | Public RPC endpoints throttle aggressively under sustained polling. Add dedicated/paid nodes per chain in `evm.config.chains[].nodes` (each with an `order`). |
 
