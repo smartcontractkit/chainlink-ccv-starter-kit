@@ -547,7 +547,7 @@ aggregator being down, but each endpoint still has to meet the bar:
   backoff), and 5 consecutive failures open the circuit breaker for 3s. Target responses well under 10s.
 - **Recover before the retry window closes.** Each message is retried with 1s to 60s backoff for up to 1 hour
   (the verification visibility window). If all of your aggregators stay unreachable past that window, the
-  indexer marks those messages timed out and stops pulling them, so the default executor will not
+  indexer marks those messages as timed out and stops pulling them, so the default executor will not
   auto-execute them. The only solution is to manually execute them: the attestations still live in your
   aggregators, and `OffRamp.execute` is permissionless, so those messages can be self-executed.
 
@@ -576,13 +576,11 @@ The indexer does not auto-discover verifiers, so onboarding is manual.
 
 Email [clusersupport@smartcontract.com](mailto:clusersupport@smartcontract.com) with:
 
-- A **display name** for your CCV (required), and optionally a **logo URL**.
+- A display name for your CCV (required) and a logo URL (optional).
 - A **website** and a **primary contact**, for the onboarding and support relationship.
-- Your **resolver contract address** per chain. It is the same address on every chain; how to fix it to that
-  address is explained in the
-  [on-chain kit](https://github.com/smartcontractkit/chainlink-ccv-starter-kit-contracts).
-- Your **aggregator read endpoint URLs, all of them**, since a committee runs several aggregators for
-  redundancy.
+- Your **resolver contract address** per chain. It is the same address on every chain; see the
+  [on-chain kit](https://github.com/smartcontractkit/chainlink-ccv-starter-kit-contracts) for how to configure your resolver to that address.
+- **All of your aggregator read endpoint URLs** - a committee runs several aggregators for redundancy, so every one must be listed
 
 > [!IMPORTANT]
 > Re-send the endpoint list whenever you add or remove an aggregator. Domain names must be stable, since
