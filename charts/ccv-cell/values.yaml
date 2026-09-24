@@ -1012,7 +1012,8 @@ verifier:
           name: ""
           kind: ClusterSecretStore
 
-        # -- RemoteRef for the database URL secret.
+        # -- RemoteRef for the bootstrap database URL (only when `keystoreBackend` is `postgres`; the
+        #    KMS backend needs no bootstrap database).
         #    See [RemoteRef](https://external-secrets.io/latest/api/spec/#external-secrets.io/v1.ExternalSecretDataRemoteRef).
         dbUrlRemoteRef: {}
 
