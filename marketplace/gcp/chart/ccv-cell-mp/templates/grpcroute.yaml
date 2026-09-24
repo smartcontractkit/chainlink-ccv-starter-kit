@@ -25,19 +25,15 @@ spec:
   hostnames:
     - {{ required "grpcRoute.hostname is required" .Values.grpcRoute.hostname | quote }}
   rules:
-    {{- if eq $kind "HTTPRoute" }}
-    # gRPC is HTTP/2, so a prefix match carries every /package.Service/Method path. The aggregator
-    # Service sets appProtocol kubernetes.io/h2c, which is what tells a gateway to speak HTTP/2 to it.
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: {{ include "ccv-cell.aggregator.fullname" $sub }}
-          port: {{ $agg.service.ports.grpc }}
-    {{- else }}
     - backendRefs:
         - name: {{ include "ccv-cell.aggregator.fullname" $sub }}
           port: {{ $agg.service.ports.grpc }}
-    {{- end }}
+      {{- if eq $kind "HTTPRoute" }}
+      # gRPC is HTTP/2, so a prefix match carries every /package.Service/Method path. The aggregator
+      # Service sets appProtocol kubernetes.io/h2c, which is what tells a gateway to speak HTTP/2 to it.
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+      {{- end }}
 {{- end }}

@@ -374,6 +374,17 @@ Prefer the direct binding. The member is just a string, so the binding can be cr
 ServiceAccount exists, and the cell comes up on the first attempt instead of waiting in
 `ContainerCreating` until access is granted.
 
+To confirm the account names rather than deriving them, render the chart and read them off:
+
+```bash
+helm template <release-name> <chart> --show-only templates/verifier/serviceaccount.yaml \
+  --show-only templates/aggregator/serviceaccount.yaml | grep '  name:'
+```
+
+That gives `<release-name>-verifier` and `<release-name>-aggregator` for a Helm install. A GCP Marketplace
+deployment provisions the accounts itself and names them differently, so read those from
+[the Marketplace guide](marketplace/gcp/README.md) instead of rendering the chart.
+
 ### Policy Hooks
 
 The Verifier supports [policy hooks](https://github.com/smartcontractkit/chainlink-ccv/blob/main/verifier/docs/policy_hook.md).
