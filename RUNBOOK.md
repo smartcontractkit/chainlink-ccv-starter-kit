@@ -33,7 +33,28 @@ signers addresses and chains configured in your committee's cells.
 > [marketplace/gcp/README.md](marketplace/gcp/README.md), then come back here from §4 onwards.
 
 - Cluster and infra dependencies (Gateway/Ingress + mesh, Postgres, secrets manager, KMS, Cloud IAM): see the
-  chart's [Requirements](charts/ccv-cell/README.md#requirements).
+  chart's [Requirements](charts/ccv-cell/README.md#requirements). Note the database count depends on your
+  keystore: three logical databases on `keystoreBackend: postgres`, but only **two** (`verifier`, `aggregator`)
+  on the `kms` backend recommended for production, because the signing key lives in your cloud KMS and the
+  `bootstrap` database is then unused. Do not provision a `bootstrap` database you will never connect to.
+- A **publicly trusted TLS certificate** on the hostname you will give the aggregator, from a CA whose root is
+  in the standard trust stores (Let's Encrypt, ACM, Google-managed, or a commercial CA). Terminating TLS is not
+  enough on its own: the callers are your committee peers and the CCIP indexer, and they will not carry your
+  private CA. A self-signed or internal-CA certificate passes every check you can run against your own cell and
+  still leaves you unreachable to everyone else, which is the hardest failure in this runbook to spot from the
+  inside. If you use cert-manager, that means a real ACME issuer rather than a self-signed or CA issuer.
+- The hostname must also **resolve publicly**. Peers and the indexer look it up from outside your network, so a
+  name that only resolves in your private zone fails for them while working for you.
+- **Which route and secret CRDs your cluster actually has.** Both choices below fork on this, and it is faster
+  to look than to assume:
+  ```bash
+  kubectl get crd | grep -E 'grpcroutes|httproutes|externalsecrets|secretproviderclass'
+  ```
+  Read the route rows like this. Both present, or only `grpcroutes`: use `grpcRoute`. Only `httproutes`: use
+  `httpRoute`, which is the case for GKE's own managed Gateway. Neither, meaning you have no Gateway API
+  controller at all and are on something like nginx-ingress: use `aggregator.ingress` instead, and see
+  [Ingress](#ingress) for the annotations a gRPC backend needs there. No `externalsecrets` means External
+  Secrets Operator is not installed, and the chart cannot assemble your `secrets.toml` for you.
 - Config field reference: `docs/config/` in `chainlink-ccv`:
   [aggregator](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/aggregator/config.documented.toml)·
   [verifier](https://github.com/smartcontractkit/chainlink-ccv/blob/main/docs/config/verifier/committee/config.documented.toml)·
@@ -60,6 +81,19 @@ We do not recommend you copy the entire file, since you'll have to maintain all 
 updates, making maintenance difficult.
 
 We'll detail here the "important bits" to watch out for.
+
+Before the details, one decision shapes most of the work: **your secrets backend decides who writes the
+configuration files.** On `externalSecret` the chart assembles `secrets.toml` from individual values you supply,
+which is the least work but requires External Secrets Operator in the cluster. On `gcpSecretStore`,
+`awsSecretStore`, `azureKeyVault` and `existingSecret` the chart only mounts what you give it, so **you author each complete
+`secrets.toml` yourself** and put it in your secrets manager. That is four files for a full cell: aggregator
+app, verifier app, verifier bootstrap, and the verifier EVM config if you keep it secret. It is not harder, but
+it is a different job, and picking the backend without knowing this is the most common way to get stuck here.
+
+If you are hand-authoring those files, work from the examples in [`local/config/`](local/config). That directory
+is the docker-compose stack's configuration, so every file in it is a complete, working example of the exact
+shape the chart mounts. Read it before you write your first one rather than reconstructing the shape from the
+field reference.
 
 ### Configs
 
@@ -103,6 +137,10 @@ verifier:
       "1": "0x00000000000000000000000000000000000000a1"
     rmn_remote_addresses:
       "1": "0x00000000000000000000000000000000000000b1"
+  bootstrap:
+    config:
+      chains:
+        "1": {}
   evm:
     config:
       chains:
@@ -111,6 +149,9 @@ verifier:
             - name: node-1
               http_url: "https://your-rpc-url"
               order: 1
+              # 0, the default, waits for the chain's finality tag, which is 10 to 15 minutes on
+              # Ethereum Sepolia. Lower it only if you accept the reduced finality guarantee.
+              finality_depth: 0
   secrets:
     app:
       type: existingSecret
@@ -192,10 +233,33 @@ configuring the aggregator and other cells. Here are a few ways how:
    print("0x" + h.digest()[-20:].hex())
    # 0x1234567890abcdef9876543210fedcba01234567
    ```
+   That snippet needs two packages, `cryptography` and `pycryptodome` (which provides `Crypto.Hash`). If you
+   would rather not install anything, the same result comes from the DER public key with tools you already have:
+
+   ```bash
+   gcloud kms keys versions get-public-key 1 --key <key> --keyring <ring> --location <loc> \
+     --output-file pub.pem
+   openssl ec -pubin -in pub.pem -pubout -outform DER -out pub.der 2>/dev/null
+   # take the last 65 bytes, drop the leading 0x04 point-format byte, keccak the remaining 64, keep 20
+   cast compute-address --from-pubkey 0x$(tail -c 65 pub.der | xxd -p -c 132 | cut -c3-)
+   ```
+
+   Whichever route you take, the uncompressed point is **65** bytes and the leading `0x04` is a format marker
+   that must be dropped before hashing. Hashing all 65 bytes, or dropping the wrong one, yields a plausible
+   looking address that is simply wrong, and the failure surfaces much later as a cell no peer recognises.
+   Always confirm the derived address against the `Using signer address` line the verifier logs on first start.
+
    Most managed KMS solutions allow you fetch the public key, consult your cloud's documentation. 
 
 After fetching your address, you can use in the aggregator's committee configs. You can also replace the verifier's own
 `signer_address` setting, but it's not necessary.
+
+> [!TIP]
+> On a KMS keystore, prefer setting `signer_address` explicitly over leaving it `auto`. The address is derivable
+> from the key's public key by method 3 above, so you can know it before the cell ever starts, and an explicit
+> value fails loudly if the verifier is ever pointed at a different key. With `auto` the verifier silently adopts
+> whatever address the configured key yields, so pointing it at the wrong key version looks like a healthy cell
+> that no peer recognises.
 
 ### Secrets
 
@@ -214,9 +278,22 @@ Set `type` on each of `aggregator.secrets.app`, `verifier.secrets.app`, `verifie
   pointing at one `secretName` (name or ARN) in AWS Secrets Manager holding a full pre-built `secrets.toml`.
   Supports both IRSA (annotate the ServiceAccount with `eks.amazonaws.com/role-arn`) and EKS Pod Identity
   (set `awsSecretStore.usePodIdentity: true` and create a Pod Identity association via EKS).
+- **`azureKeyVault`**: chart creates a `SecretProviderClass` using the [Azure Key Vault provider for the
+  Secrets Store CSI Driver](https://azure.github.io/secrets-store-csi-driver-provider-azure/), pointing at
+  secrets in a Key Vault that hold a full pre-built `secrets.toml`. Requires the provider installed on the AKS
+  cluster and either Workload Identity (annotate the ServiceAccount with `azure.workload.identity/client-id`,
+  set `clientId`, and add the `azure.workload.identity/use: "true"` pod label via `*.podLabels`) or Azure AD
+  Pod Identity (`usePodIdentity: true` plus an AzureIdentityBinding).
 - **`existingSecret`**: you manage the `Secret` yourself, the chart just mounts it.
 
 Both API Keys and Secrets keys are generated by you. `api_key` must be a UUID, `secret_key` must be hex-encoded.
+
+> [!IMPORTANT]
+> Treat the verifier's EVM chain configuration as a secret, not as values. Almost every production RPC provider
+> embeds the API key in the URL, so `evm.config.chains[].nodes[].http_url` normally carries a credential. The
+> chart's `type: values` path renders that config into a ConfigMap, which is readable by anything with `get
+> configmaps` in the namespace and ends up in plain text in your values file. Set `verifier.secrets.evm` to one
+> of the secret backends and keep the chain config there instead.
 
 See [Peer information and credential exchange](#8-peer-information-and-credential-exchange) below for a recommendation
 on how to exchange credentials between peers.
@@ -229,7 +306,7 @@ on how to exchange credentials between peers.
 **On `externalSecret`, the chart writes the keystore block for you** from `keystoreBackend` and
 `verifier.secrets.bootstrap.kms.*`.
 
-**On `gcpSecretStore`, `awsSecretStore` and `existingSecret` you write `secrets.toml` yourself** and the
+**On `gcpSecretStore`, `awsSecretStore`, `azureKeyVault` and `existingSecret` you write `secrets.toml` yourself** and the
 chart only mounts it. `keystoreBackend` and `kms.*` are ignored on those paths. For production, where a
 managed KMS is recommended over a Postgres-held key, the block you need is:
 
@@ -287,6 +364,102 @@ aggregator:
 Note that they are all `enabled: false` by default. You only need to enable one. If you don't know which one, contact
 your cluster administrator, and they'll be able to guide you properly. Note to them that the aggregator needs a
 dedicated and unchanging hostname, exposed to the internet, and is gRPC.
+
+**Which one you can use is decided by your Gateway controller, not by preference.** Check what it serves:
+
+```bash
+kubectl get crd | grep -E 'grpcroutes|httproutes'
+```
+
+Istio, Envoy Gateway and Contour serve `GRPCRoute`, which is the natural fit and needs nothing beyond the block
+above. GKE's own managed Gateway serves **`HTTPRoute` only**: there is no `grpcroutes` CRD to create, so
+`grpcRoute.enabled: true` renders a resource the cluster will reject. Use `httpRoute` there, and expect a few
+extra steps.
+
+#### Extra steps on a managed Gateway that serves HTTPRoute only
+
+Verified against GKE's managed Gateway (`gke-l7-global-external-managed`). The route itself is the easy part;
+the health check is what actually blocks you.
+
+1. **Check the Gateway's `allowedRoutes` before you choose a namespace or grant any IAM.** A brownfield Gateway
+   is commonly `allowedRoutes: from: Same`, which means it accepts routes only from its own namespace and
+   therefore dictates the namespace your release must live in:
+
+   ```bash
+   kubectl get gateway <gateway> -n <gateway-namespace> \
+     -o jsonpath='{.spec.listeners[*].allowedRoutes.namespaces.from}{"\n"}'
+   ```
+
+   Do this first because the Workload Identity principal embeds the namespace
+   (`.../subject/ns/<namespace>/sa/<ksa>`). Discovering the constraint after you have granted the secret bindings
+   means redoing every one of them.
+2. **Apply a `HealthCheckPolicy`, after the release exists.** This is the step that actually blocks you. The
+   chart renders nothing like it, and GKE's default behaviour is to derive the health check from the port the
+   Service serves, which is the gRPC port, and probe it with a plain HTTP `GET /`. A gRPC server never answers
+   that with a 200, so the backend stays `UNHEALTHY` forever. The policy points the check at the health port
+   instead, which is already the container's readiness probe, so nothing new is exposed:
+
+   ```yaml
+   apiVersion: networking.gke.io/v1
+   kind: HealthCheckPolicy
+   metadata:
+     name: <release>-ccv-cell-aggregator
+     namespace: <namespace>
+   spec:
+     default:
+       config:
+         type: HTTP
+         httpHealthCheck:
+           portSpecification: USE_FIXED_PORT
+           port: 8080  # aggregator.config.healthCheck.port
+           requestPath: /health/ready
+     targetRef:
+       group: ''
+       kind: Service
+       name: <release>-ccv-cell-aggregator
+   ```
+
+   It targets the aggregator Service by name, so it can only be created once that Service is there. Apply it
+   right after `helm upgrade --install`, and delete it at teardown, since Helm does not own it.
+3. **Serve over HTTPS, not plain HTTP.** HTTP/2 is only negotiated over TLS on this path, so a plain-HTTP
+   listener cannot carry gRPC through it at all. Attach a certificate to the listener, and per the
+   [prerequisites](#1-prerequisites) make it a publicly trusted one.
+4. **Gate on `Programmed`, not `Accepted`.** A Gateway and route report `Accepted: True` as soon as the config
+   is syntactically valid, long before any of it is live. Wait for the Gateway's `Programmed: True` and its
+   `GatewayHealthy` condition. Provisioning the forwarding rule and the certificate takes several minutes.
+
+You do not need to set `appProtocol` yourself: the chart already marks the aggregator's gRPC Service port
+`kubernetes.io/h2c`, which is what tells the load balancer to speak cleartext HTTP/2 to the backend.
+
+> [!CAUTION]
+> **If you issue the listener certificate with cert-manager's HTTP-01 challenge, the challenge solver needs a
+> `HealthCheckPolicy` of its own, and it must probe `/` rather than the challenge path.** Without one the
+> `Certificate` never becomes `Ready`: the GKE health check reports `wrong status code '503', expected '200'`
+> indefinitely, while the Gateway says `Programmed: True`, the solver's HTTPRoute says `Accepted: True` and the
+> solver pod is `1/1`. A measured run sat in that state for 174 minutes.
+>
+> The reason the obvious fix does not work: GKE probes the backend with the backend IP in the `Host` header, and
+> cert-manager's `acmesolver` answers **404 to any request whose `Host` does not match its `--domain`**, the
+> challenge path included. So a policy pointed at `/.well-known/acme-challenge/<token>` can never pass. Probing
+> `/` returns 200 regardless of `Host`. With that policy applied, issuance completed 65 seconds later.
+>
+> Two operational consequences. The solver Service name is generated per challenge and `HealthCheckPolicy.targetRef`
+> takes a Service **name** with no selector, so the policy cannot be created in advance: you write a fresh one for
+> the initial issuance and for **every renewal**, roughly every 90 days. If that is unacceptable, use a
+> Google-managed certificate or Certificate Manager instead of an in-cluster HTTP-01 challenge, or complete the
+> challenge with DNS-01, which needs no inbound HTTP path at all.
+
+> [!WARNING]
+> Until the aggregator's `HealthCheckPolicy` is in place the backend stays `UNHEALTHY` and every request returns **503**,
+> while the Gateway reports `Programmed: True`, the route reports `Accepted: True`, and both pods are `1/1`.
+> Nothing in `kubectl` looks wrong. If you are seeing 503s through a managed Gateway with healthy pods, check
+> the backend health in your cloud console before you look anywhere else.
+
+> [!CAUTION]
+> Do not verify gRPC with a plain `curl` that only checks the HTTP status. gRPC reports failures in **trailers
+> underneath an HTTP 200**: a broken backend, and even an aggregator scaled to zero replicas, can still answer
+> `200` with `content-type: application/grpc`. Check the `grpc-status` trailer, where `0` means success, or use
+> a real gRPC client such as `grpcurl`.
 
 ### Resources
 
@@ -349,9 +522,15 @@ so it also needs `roles/cloudkms.viewer`. With only the first it crash-loops on
 On Google Cloud the required algorithm, `ec-sign-secp256k1-sha256`, exists only at **HSM** protection level.
 Reference the key by its CryptoKeyVersion resource name, ending `/cryptoKeyVersions/<n>`.
 
+To read the public key yourself, so you can derive the signer address before deploying, you need
+`roles/cloudkms.publicKeyViewer` on the key. `roles/cloudkms.viewer` does not include
+`cloudkms.cryptoKeyVersions.viewPublicKey` and will not do it. Grant yourself the narrow role rather than
+reaching for `roles/cloudkms.signerVerifier`, which would also let you sign with a committee key.
+
 With the `kms` backend the bootstrap secret needs no `[db]` and no `[keystore] password`, so a cell needs
-two logical databases (`verifier`, `aggregator`) rather than three. Note that the chart's `externalSecret`
-path writes a `[db] url` into the bootstrap secret on every backend, so on that path supply one regardless.
+two logical databases (`verifier`, `aggregator`) rather than three. This holds on every secrets backend,
+`externalSecret` included: that path writes the `[db] url` block only when `keystoreBackend` is `postgres`,
+so on `kms` there is no bootstrap database to supply and none to provision.
 
 #### Workload Identity for `gcpSecretStore`
 
@@ -381,7 +560,9 @@ helm template <release-name> <chart> --show-only templates/verifier/serviceaccou
   --show-only templates/aggregator/serviceaccount.yaml | grep '  name:'
 ```
 
-That gives `<release-name>-verifier` and `<release-name>-aggregator` for a Helm install. A GCP Marketplace
+Read the names out rather than predicting them, because the pattern depends on the release name: a release
+called `cell-0` gives `cell-0-ccv-cell-verifier`, while one called `ccv-cell-0` collapses to `ccv-cell-0-verifier`
+(see [§8](#8-peer-information-and-credential-exchange)). A GCP Marketplace
 deployment provisions the accounts itself and names them differently, so read those from
 [the Marketplace guide](marketplace/gcp/README.md) instead of rendering the chart.
 
@@ -462,7 +643,13 @@ Verifier healthy:
 
 > [!TIP]
 > Depending on chain RPC connectivity, aggregator connectivity and other patterns, it may take a few moments for the
-> verifier to start! Don't panic on a few errors and warnings in the logs for the first minute.
+> verifier to start! Errors and warnings in the logs during that window are expected.
+>
+> Expect real volume, not a couple of lines. Two measured first starts logged 38 errors over 27 seconds and 24
+> errors over 16 seconds, mostly the verifier failing to reach an aggregator that has not finished coming up.
+> The text of those errors is identical to what a permanently misconfigured cell logs, so the only thing that
+> distinguishes startup noise from a real problem is that it stops. Give it a couple of minutes, then judge it
+> by whether new errors are still arriving, not by whether any appeared.
 
 ## 5. If a pod won't start
 
@@ -504,8 +691,14 @@ operators. Consider the single-points of failure in each domain that could compr
 Each individual combination of verifier and aggregator across all cells of a committee will have one secret key pair.
 Because this can get complicated, we recommend the following:
 - Name each cell (and helm release) in a predictable manner: use number indexes, or simple identifiers:
-  - `helm install ccv-cell-0`, `helm install ccv-cell-1`, `helm install ccv-cell-2`, etc. are easily identifiable.
-  - If you deploy one cell per region, that may be a reasonable suffix: `ccv-cell-use1`, `ccv-cell-euw2`, etc.
+  - `helm install cell-0`, `helm install cell-1`, `helm install cell-2`, etc. are easily identifiable.
+  - If you deploy one cell per region, that may be a reasonable suffix: `cell-use1`, `cell-euw2`, etc.
+  - Avoid putting `ccv-cell` in the release name. Helm's naming convention drops the chart name when the
+    release name already contains it, so a release called `ccv-cell-0` produces `ccv-cell-0-aggregator` while
+    a release called `cell-0` produces `cell-0-ccv-cell-aggregator`. Both work, but the names differ, and the
+    ones that change include the ServiceAccounts your cloud IAM bindings are keyed on. Render the chart and
+    read the real names rather than predicting them, as in
+    [Workload Identity](#workload-identity-for-gcpsecretstore) above.
 - Keep hostnames consistent with aggregator names: if you deploy a cell named `ccv-cell-potato` and `ccv-cell-banana`,
   consider hostnames like `aggregator-potato.example.com` and `aggregator-banana.example.com`.
   - Consider the hostname carefully. **Changing it requires updating it in all peers and the indexer**!
@@ -603,8 +796,15 @@ redundancy will not be onboarded.
 
 ### 9.2 Expose each aggregator read endpoint publicly and anonymously
 
-Reachable with no API key and no IP allowlist, over TLS. Standard WAF / DDoS protection in front is fine as
-long as it does not block legitimate public reads.
+Reachable with no API key and no IP allowlist, over TLS with a **publicly trusted certificate** on a
+**publicly resolvable hostname**. The indexer and your committee peers connect from outside your network with
+the standard trust stores, so a private CA or an internal-only DNS name fails for them even though your own
+tests against the cell pass. Standard WAF / DDoS protection in front is fine as long as it does not block
+legitimate public reads.
+
+Confirm it from outside your network rather than from a pod or a workstation that trusts your internal CA. A
+plain `openssl s_client -connect <host>:443` from an unrelated machine, with no custom CA bundle, is enough:
+if it reports a verified chain there, peers will get one too.
 
 ### 9.3 Keep the read endpoints responsive and reachable
 
@@ -626,9 +826,23 @@ aggregator being down, but each endpoint still has to meet the bar:
 Do this before requesting onboarding. It proves your cells produce attestations the destination chain
 actually accepts, and it separates a problem in your setup from a problem in the onboarding.
 
-1. Send a message on a lane your committee verifies.
+1. Send a message that the **destination** requires your CCV for. This is not the same as a message that names
+   your CCV: a data message can name your verifier, be charged for it, and be attested by you, while the
+   destination's `getCCVsForMessage` still requires only the default CCV, so your attestation is never needed and
+   the validation proves nothing. Check what the destination actually requires before you send, and use a token
+   transfer whose **pool mandates your CCV**, which is the shape that forces it into the required set.
+   **Expect minutes, not seconds.** The verifier waits for
+   source-chain finality before it attests, and `finality_depth` defaults to `0`, which means the chain's
+   finality tag rather than a block count. On Ethereum Sepolia that is roughly 10 to 15 minutes. A measured run
+   had no attestation at 463 seconds and a complete one at 557 seconds. Throughout that window the verifier logs
+   nothing but `Healthy` heartbeats, which looks exactly like a broken cell. Lower
+   `evm.config.chains.<selector>.nodes[].finality_depth` if you want a faster signal while validating, and
+   understand that trades finality safety for latency.
 2. Fetch the aggregated `ccv_data` for that `messageId` from one of your aggregator read endpoints, using the
-   same anonymous read path the indexer uses.
+   same anonymous read path the indexer uses. **Use your own aggregator, not the public CCIP API, as the source
+   of truth here.** Until you are registered (§9.5) the public API does not know your CCV, so it reports the
+   message's verifier entry as `status: UNKNOWN` with a null verification even after your cell holds a complete
+   attestation. That is expected for an unregistered committee, not evidence of a problem.
 3. Build and submit the execution with the CCIP SDK: `source.getExecutionInput({ request, verifications })`
    then `dest.execute({ offRamp, input, wallet })`.
 4. Confirm the message reaches success on the destination chain.
