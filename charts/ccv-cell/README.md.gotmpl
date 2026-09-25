@@ -45,10 +45,14 @@ A CCV Cell also has a few external pre-requisites for a production grade deploym
 - PostgreSQL cluster, minimum version 15:
   - We recommend at least a standby replica for HA.
   - All connections must be encrypted.
-  - Three logical databases: `bootstrap`, used by the bootstrap process; `verifier`, used by the verifier application to
-    hold chain state; and `aggregator`, used to store verifications the aggregator receives.
-  - We further recommend that the `bootstrap` and `verifier` databases are placed on one cluster, and the `aggregator`
-    database be placed on another. This implementation detail may vary depending on your infrastructure.
+  - Two or three logical databases, depending on where the verifier's signing key lives: `verifier`, used by the
+    verifier application to hold chain state; `aggregator`, used to store verifications the aggregator receives;
+    and `bootstrap`, used by the bootstrap process **only when `keystoreBackend` is `postgres`**. On the `kms`
+    keystore backend, which is the recommendation for production, the signing key lives in your cloud KMS and no
+    `bootstrap` database is needed, so provision two.
+  - We further recommend that the `verifier` database, and the `bootstrap` database if you have one, are placed on
+    one cluster, and the `aggregator` database be placed on another. This implementation detail may vary depending
+    on your infrastructure.
 - A secrets manager:
   - The chart has first class support for [External Secrets Operator](https://external-secrets.io/),
     [GCP's Secret Manager](https://docs.cloud.google.com/secret-manager/docs/secret-manager-managed-csi-component),
