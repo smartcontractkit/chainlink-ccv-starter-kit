@@ -1,4 +1,5 @@
 {{- if .Values.verifier.enabled }}
+{{- include "ccv-cell.assertKeystoreUsable" (dict "root" . "component" "verifier" "subComponent" "bootstrap") }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

@@ -220,6 +220,16 @@ aggregator:
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.
+      #
+      #    This choice also decides WHO WRITES THE TOML, which is easy to miss:
+      #      externalSecret  the chart assembles secrets.toml for you from individual values. Requires
+      #                      External Secrets Operator (external-secrets.io) to be installed in the cluster.
+      #      gcpSecretStore  / awsSecretStore / azureKeyVault / existingSecret
+      #                      YOU author the complete secrets.toml and the chart only mounts it. Keys that
+      #                      exist purely to build that file, such as `keystoreBackend` and `kms.*`, are
+      #                      NOT read on these paths.
+      #    Check which your cluster supports before choosing:
+      #      kubectl get crd | grep -E 'externalsecrets|secretproviderclass'
       type: externalSecret
 
       existingSecret:
@@ -675,7 +685,9 @@ verifier:
     on_ramp_addresses: {}
     # "1": "0x00000000000000000000000000000000000000a1"
 
-    # -- Addresses of the RMN Remote contracts, one per chain selector. Required for curse detection.
+    # -- Addresses of the RMN Remote contracts, one per chain selector. Optional: leave empty and the
+    #    verifier derives each one from the OnRamp static config, logging `Derived RMN Remote address from
+    #    OnRamp static config`. Set it only to pin an address explicitly.
     #    Note: the map keys must be strings, wrapped in quotes.
     rmn_remote_addresses: {}
     # "1": "0x00000000000000000000000000000000000000b1"
@@ -798,6 +810,16 @@ verifier:
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.
+      #
+      #    This choice also decides WHO WRITES THE TOML, which is easy to miss:
+      #      externalSecret  the chart assembles secrets.toml for you from individual values. Requires
+      #                      External Secrets Operator (external-secrets.io) to be installed in the cluster.
+      #      gcpSecretStore  / awsSecretStore / azureKeyVault / existingSecret
+      #                      YOU author the complete secrets.toml and the chart only mounts it. Keys that
+      #                      exist purely to build that file, such as `keystoreBackend` and `kms.*`, are
+      #                      NOT read on these paths.
+      #    Check which your cluster supports before choosing:
+      #      kubectl get crd | grep -E 'externalsecrets|secretproviderclass'
       type: externalSecret
 
       existingSecret:
@@ -977,6 +999,10 @@ verifier:
       labels: {}
 
       # -- Keystore backend: `postgres` or `kms`.
+      #    ONLY READ WHEN `type: externalSecret`. On every other type the chart mounts your secrets.toml
+      #    verbatim and cannot inject anything into it, so this key and `kms.*` below are ignored: put the
+      #    `[keystore]` / `[keystore.kms]` blocks inside the secret you supply. The chart fails the render
+      #    rather than ignoring them silently.
       keystoreBackend: postgres
 
       kms:
@@ -995,6 +1021,16 @@ verifier:
 
       # -- Secret provisioning strategy: `externalSecret`, `existingSecret`, `gcpSecretStore`, `awsSecretStore`, or `azureKeyVault`.
       #    Configure the values below for the chosen type.
+      #
+      #    This choice also decides WHO WRITES THE TOML, which is easy to miss:
+      #      externalSecret  the chart assembles secrets.toml for you from individual values. Requires
+      #                      External Secrets Operator (external-secrets.io) to be installed in the cluster.
+      #      gcpSecretStore  / awsSecretStore / azureKeyVault / existingSecret
+      #                      YOU author the complete secrets.toml and the chart only mounts it. Keys that
+      #                      exist purely to build that file, such as `keystoreBackend` and `kms.*`, are
+      #                      NOT read on these paths.
+      #    Check which your cluster supports before choosing:
+      #      kubectl get crd | grep -E 'externalsecrets|secretproviderclass'
       type: externalSecret
 
       existingSecret:

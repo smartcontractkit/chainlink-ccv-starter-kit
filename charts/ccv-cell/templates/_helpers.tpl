@@ -247,3 +247,29 @@ strict TOML decoder rejects for integer fields. Usage:
 {{- $_ := set $.m . (int64 (index $.m .)) }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Fail loudly when keystore settings are supplied on a secret path that cannot use them.
+On externalSecret the chart assembles secrets.toml and honours keystoreBackend / kms.*. On every other
+type it mounts the operator's file verbatim and cannot inject into it, so those keys were silently
+ignored: a cell would come up holding no keystore configuration at all, with nothing in the render or
+the logs to say why. Fail instead.
+include "ccv-cell.assertKeystoreUsable" (dict "root" . "component" "verifier" "subComponent" "bootstrap")
+*/}}
+{{- define "ccv-cell.assertKeystoreUsable" -}}
+{{- $secret := index .root.Values .component "secrets" .subComponent -}}
+{{- if ne $secret.type "externalSecret" -}}
+  {{- $set := list -}}
+  {{- if and (hasKey $secret "keystoreBackend") (ne (toString $secret.keystoreBackend) "postgres") -}}
+    {{- $set = append $set "keystoreBackend" -}}
+  {{- end -}}
+  {{- if $secret.kms -}}
+    {{- if or $secret.kms.provider $secret.kms.ecdsaKeyId $secret.kms.ed25519KeyId -}}
+      {{- $set = append $set "kms.*" -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $set -}}
+    {{- fail (printf "%s.secrets.%s sets %s but type is %q. Those keys are only read on type: externalSecret, where the chart assembles secrets.toml for you. On %q you author secrets.toml yourself, so put the [keystore] and [keystore.kms] blocks inside the secret you supply and remove these keys." .component .subComponent (join " and " $set) $secret.type $secret.type) -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
