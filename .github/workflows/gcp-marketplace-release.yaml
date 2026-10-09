@@ -22,6 +22,7 @@ env:
 
 jobs:
   publish:
+    environment: publish
     runs-on: ubuntu-latest
     steps:
       - name: Validate version format
@@ -46,8 +47,12 @@ jobs:
         env:
           CRANE_VERSION: "v0.22.1"
         run: |
+          set -euo pipefail
           curl -fsSL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" \
-            | tar xz -C /usr/local/bin crane
+            -o /tmp/go-containerregistry_Linux_x86_64.tar.gz
+          echo "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0  /tmp/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sha256sum --check
+          tar xzf /tmp/go-containerregistry_Linux_x86_64.tar.gz -C /usr/local/bin crane
 
       - name: Build and push component images
         run: |
@@ -59,7 +64,8 @@ jobs:
             registry=$(yq ".verify.${image}.image.registry" "$values")
             repository=$(yq ".verify.${image}.image.repository" "$values")
             tag=$(yq ".verify.${image}.image.tag" "$values")
-            fullImageName="${registry}/${repository}:${tag}"
+            digest=$(yq ".verify.${image}.image.digest" "$values")
+            fullImageName="${registry}/${repository}:${tag}@${digest}"
 
             printf 'FROM %s' "$fullImageName" | docker buildx build \
               --platform linux/amd64,linux/arm64 \
@@ -75,7 +81,7 @@ jobs:
             --platform linux/amd64 \
             --provenance=false --sbom=false \
             --build-arg TAG="${VERSION}" \
-            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base:latest" \
+            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base@sha256:87effe04334cc86747bac504c1430f3fff1fc75f5e0d69c8b4ddb73d12e2647b" \
             --load -t "${DEST}/deployer:${VERSION}" .
           docker push "${DEST}/deployer:${VERSION}"
           crane mutate "${DEST}/deployer:${VERSION}" \
