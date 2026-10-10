@@ -22,7 +22,7 @@ env:
 
 jobs:
   publish:
-    environment: publish
+    environment: publish-marketplace
     runs-on: ubuntu-latest
     steps:
       - name: Validate version format
