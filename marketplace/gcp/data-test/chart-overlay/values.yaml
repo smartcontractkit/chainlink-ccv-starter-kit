@@ -7,11 +7,14 @@ verify:
       registry: docker.io
       repository: library/postgres
       tag: 16-alpine
+      # Source digest for the marketplace re-push; the listing deploys by tag.
+      digest: sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
   curl:
     image:
       registry: docker.io
       repository: curlimages/curl
       tag: 8.21.0
+      digest: sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
 
 ccv-cell:
   aggregator:
