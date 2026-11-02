@@ -27,14 +27,14 @@ As of 2026‑11‑02:
 | | |
 | --- | --- |
 | Image | `us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base` |
-| Digest pinned in CI | `sha256:87effe04334cc86747bac504c1430f3fff1fc75f5e0d69c8b4ddb73d12e2647b` |
-| Tags pointing at it | `latest`, `20260914` |
-| Built | `2026-09-14T21:31:16Z` |
+| Digest pinned in CI | `sha256:76810d5b97a83c8e0516904520b0d4119a746c9d49713dd0a42c56d1169c4fc3` |
+| Tags pointing at it | `latest`, `20261102` |
+| Built | `2026-11-02T16:19:04Z` |
 | Platform | `linux/amd64` only |
 | Base OS | Ubuntu 22.04 |
-| `/version` | `20260914` (from the `VERSION` build arg) |
+| `/version` | `20261102` (from the `VERSION` build arg) |
 
-Tags are mutable (the repository has no immutable-tag policy). Pushing `20260914` again silently replaces
+Tags are mutable (the repository has no immutable-tag policy). Pushing `20261102` again silently replaces
 the digest the workflow points at. That is why the build workflow refuses to overwrite an existing build
 tag; use a new tag for every rebuild. It does re-point the `latest` convenience tag on each run, but CI
 never consumes that tag — it pins the digest.

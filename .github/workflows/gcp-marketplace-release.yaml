@@ -81,7 +81,7 @@ jobs:
             --platform linux/amd64 \
             --provenance=false --sbom=false \
             --build-arg TAG="${VERSION}" \
-            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base@sha256:87effe04334cc86747bac504c1430f3fff1fc75f5e0d69c8b4ddb73d12e2647b" \
+            --build-arg DEPLOYER_BASE="us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base@sha256:76810d5b97a83c8e0516904520b0d4119a746c9d49713dd0a42c56d1169c4fc3" \
             --load -t "${DEST}/deployer:${VERSION}" .
           docker push "${DEST}/deployer:${VERSION}"
           crane mutate "${DEST}/deployer:${VERSION}" \
