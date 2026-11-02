@@ -1,0 +1,125 @@
+name: gcp-marketplace-deployer-base
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'marketplace-k8s-app-tools tag or commit SHA to build (e.g. 13.0.15)'
+        required: true
+        type: string
+      tag:
+        description: 'Image tag to publish (default: current UTC date, YYYYMMDD)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  IMAGE: us-docker.pkg.dev/chainlink-labs-ltd-public/google-marketplace-chainlink-ccv/deployer-base
+
+concurrency:
+  group: gcp-marketplace-deployer-base
+  cancel-in-progress: false
+
+jobs:
+  build:
+    environment: publish-marketplace
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require an explicit source_ref
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SOURCE_REF" ]; then
+            echo "::error::source_ref is required; pass the marketplace-k8s-app-tools commit to build"
+            exit 1
+          fi
+
+      - name: Checkout marketplace-k8s-app-tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: GoogleCloudPlatform/marketplace-k8s-app-tools
+          ref: ${{ inputs.source_ref }}
+          path: upstream
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: chainlink-labs-ltd-public
+          workload_identity_provider: projects/748463247428/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+
+      - name: Resolve tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$(date -u +%Y%m%d)"
+          fi
+          if ! [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::invalid tag '$tag'"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse to overwrite an existing tag
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gcloud artifacts docker images describe "${IMAGE}:${TAG}" >/dev/null 2>&1; then
+            echo "::error::${IMAGE}:${TAG} already exists; pass a different tag"
+            exit 1
+          fi
+
+      - name: Build and push
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        working-directory: upstream
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false --sbom=false \
+            --build-arg VERSION="$TAG" \
+            -f marketplace/deployer_helm_base/Dockerfile \
+            -t "${IMAGE}:${TAG}" \
+            -t "${IMAGE}:latest" \
+            --push .
+
+      - name: Report digest
+        id: digest
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          digest="$(gcloud artifacts docker images describe "${IMAGE}:${TAG}" \
+            --format='value(image_summary.digest)')"
+          commit="$(git -C upstream rev-parse HEAD)"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          {
+            echo "## deployer-base published"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Source commit | \`$commit\` |"
+            echo "| Tag | \`$TAG\` |"
+            echo "| Digest | \`$digest\` |"
+            echo
+            echo "Pin it in \`.github/workflows/gcp-marketplace-release.yaml\`:"
+            echo
+            echo '```'
+            echo "--build-arg DEPLOYER_BASE=\"${IMAGE}@${digest}\" \\"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
