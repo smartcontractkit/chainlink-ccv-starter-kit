@@ -62,10 +62,11 @@ release pick it up.
 
    It checks out `marketplace-k8s-app-tools` at `source_ref`, builds
    `marketplace/deployer_helm_base/Dockerfile` for `linux/amd64` with `--build-arg VERSION=<tag>`, and
-   pushes `deployer-base:<tag>` plus `:latest`. `source_ref` is required and has no default: pass the
-   upstream release tag (for example `13.0.15`) or a commit SHA. The run summary prints the commit the tag
-   resolved to; record that, or pass it directly if you want an immutable reference. The run waits on the
-   `publish-marketplace` environment for approval.
+   pushes `deployer-base:<tag>` plus `:latest`. `source_ref` is required and has no default: it must be a
+   release tag in the upstream repository (for example `13.0.15`) whose commit is on `master`. The workflow
+   rejects branches and commit SHAs, and rejects a tag whose commit is not merged to `master`. The run
+   summary prints the commit the tag resolved to; record that alongside the image digest. The run waits on
+   the `publish-marketplace` environment for approval.
 
    It authenticates with the same Workload Identity provider as `gcp-marketplace-release`. If that
    provider's attribute condition is scoped to a specific workflow file, this one has to be added to it.
@@ -147,7 +148,7 @@ the resulting deployer is built from the old base and the update needs another v
   the trigger is still a human deciding to refresh it.
 - The workflow prints the digest but does not open the pin-bump PR; step 3 is still manual.
 - The upstream Dockerfile is not reproducible by design: unpinned `ubuntu:22.04`, `kubectl` from
-  `dl.k8s.io/release/stable.txt`, Helm from the latest GitHub release. Pin the upstream commit you build
-  from, and record the digest you produce.
+  `dl.k8s.io/release/stable.txt`, Helm from the latest GitHub release. Upstream tags are also lightweight,
+  so record the commit printed by the run summary alongside the image digest.
 - The base is `linux/amd64` only. The deployer is built `--platform linux/amd64`, so this is fine today,
   but it is not a multi-arch base.

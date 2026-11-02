@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: 'marketplace-k8s-app-tools tag or commit SHA to build (e.g. 13.0.15)'
+        description: 'marketplace-k8s-app-tools release tag to build (e.g. 13.0.15); must be on master'
         required: true
         type: string
       tag:
@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$SOURCE_REF" ]; then
-            echo "::error::source_ref is required; pass the marketplace-k8s-app-tools commit to build"
+            echo "::error::source_ref is required; pass the marketplace-k8s-app-tools release tag to build"
             exit 1
           fi
 
@@ -45,6 +45,30 @@ jobs:
           repository: GoogleCloudPlatform/marketplace-k8s-app-tools
           ref: ${{ inputs.source_ref }}
           path: upstream
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate source_ref is a tag on master
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$SOURCE_REF" =~ ^[0-9A-Za-z.][0-9A-Za-z._-]*$ ]]; then
+            echo "::error::source_ref must be a release tag name (got '$SOURCE_REF')"
+            exit 1
+          fi
+          if ! git -C upstream tag --points-at HEAD --list "$SOURCE_REF" \
+              | grep -Fxq "$SOURCE_REF"; then
+            echo "::error::$SOURCE_REF is not a tag in marketplace-k8s-app-tools"
+            echo "::error::pass a release tag (e.g. 13.0.15), not a branch or commit SHA"
+            exit 1
+          fi
+          git -C upstream fetch --no-tags origin master
+          if ! git -C upstream merge-base --is-ancestor HEAD FETCH_HEAD; then
+            echo "::error::tag $SOURCE_REF is not on master"
+            echo "::error::refusing to build from a commit that is not merged"
+            exit 1
+          fi
 
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
@@ -78,7 +102,11 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          if gcloud artifacts docker images describe "${IMAGE}:${TAG}" >/dev/null 2>&1; then
+          tags="$(gcloud artifacts docker tags list "$IMAGE" --format='value(tag)')" || {
+            echo "::error::failed to list existing tags; not assuming the tag is free"
+            exit 1
+          }
+          if printf '%s\n' "$tags" | grep -Fxq "$TAG"; then
             echo "::error::${IMAGE}:${TAG} already exists; pass a different tag"
             exit 1
           fi
